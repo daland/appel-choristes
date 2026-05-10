@@ -27,8 +27,8 @@ window.dispatchEvent(new Event('firebase-ready'));
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 :root{
   --ink:#1a1a2e;--gold:#c9a84c;--gold-light:#f0d78a;--cream:#faf8f2;
-  --S:#b5294e;--A:#7b2d8b;--T:#1a7a4a;--B:#1a4f8b;
-  --S-bg:#fdf0f3;--A-bg:#f8f0fd;--T-bg:#f0fdf6;--B-bg:#f0f5fd;
+  --S:#b5294e;--A:#7b2d8b;--T:#00897B;--B:#1a4f8b; /* Ténors en bleu-vert */
+  --S-bg:#fdf0f3;--A-bg:#f8f0fd;--T-bg:#E0F2F1;--B-bg:#f0f5fd; /* Fond clair pour Ténors */
   --absent:#e53935;--present:#43a047;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -93,6 +93,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);m
 input[type=text],select{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #e0e0e0;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:#fff;transition:border-color .2s}
 input[type=text]:focus,select:focus{border-color:var(--gold)}
 select{flex:0 0 76px}
+
+/* PUPIL SCROLL BUTTONS */
+.pupitre-scroll-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 
 /* QR MODAL */
 #qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px}
@@ -230,6 +236,15 @@ select{flex:0 0 76px}
     <button class="btn btn-green btn-sm" onclick="openImportModal()">📥 Importer Excel</button>
     <button class="btn btn-outline btn-sm" onclick="openResetModal()">↺ Réinitialiser</button>
   </div>
+
+  <!-- Boutons pour scroller vers chaque pupitre -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;justify-content:center;flex-wrap:wrap">
+    <button class="pupitre-scroll-btn" onclick="scrollToPupitre('S')" style="background:var(--S-bg);color:var(--S);border:none;border-radius:50%;width:40px;height:40px;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s">S</button>
+    <button class="pupitre-scroll-btn" onclick="scrollToPupitre('A')" style="background:var(--A-bg);color:var(--A);border:none;border-radius:50%;width:40px;height:40px;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s">A</button>
+    <button class="pupitre-scroll-btn" onclick="scrollToPupitre('T')" style="background:var(--T-bg);color:var(--T);border:none;border-radius:50%;width:40px;height:40px;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s">T</button>
+    <button class="pupitre-scroll-btn" onclick="scrollToPupitre('B')" style="background:var(--B-bg);color:var(--B);border:none;border-radius:50%;width:40px;height:40px;font-family:'Playfair Display',serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s">B</button>
+  </div>
+
   <p class="section-title">Liste par pupitre</p>
   <div id="admin-list"></div>
 </div>
@@ -310,10 +325,10 @@ select{flex:0 0 76px}
 </div>
 
 <script>
-const PIN = '0692'; // Code PIN modifié
+const PIN = '0692'; // Code PIN
 const PUPITRES = ['S','A','T','B'];
 const PUPITRE_LABEL = {S:'Sopranos',A:'Altos',T:'Ténors',B:'Basses'};
-const PUPITRE_BG = {S:'#fdf0f3',A:'#f8f0fd',T:'#f0fdf6',B:'#f0f5fd'};
+const PUPITRE_BG = {S:'#fdf0f3',A:'#f8f0fd',T:'#E0F2F1',B:'#f0f5fd'};
 
 let choristes = {};
 let pinEntry = '';
@@ -333,8 +348,9 @@ function checkPin() {
     setTimeout(()=>{
       document.getElementById('pin-screen').style.display='none';
       document.getElementById('header').style.display='block';
-     document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-	 document.getElementById('view-choristes').style.display='block';
+      document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+      document.getElementById('view-choristes').style.display='block';
+      document.getElementById('view-choristes').classList.add('active');
       initFirebase();
     },300);
   } else {
@@ -368,7 +384,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   btn.classList.add('active');
-  
+
   // Masquer toutes les vues, puis afficher celle demandée
   document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   document.getElementById('view-' + name).style.display = 'block';
@@ -378,6 +394,14 @@ function showTab(name, btn) {
     renderAdmin();
   } else if (name === 'absents') {
     renderDashboard();
+  }
+}
+
+// Fonction pour scroller vers un pupitre spécifique
+function scrollToPupitre(pupitre) {
+  const element = document.getElementById(`pupitre-${pupitre}`);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -487,7 +511,7 @@ function renderAdmin() {
   PUPITRES.forEach(p=>{
     const members=Object.entries(choristes).filter(([,c])=>c.pupitre===p);
     if(!members.length) return;
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px'; card.id=`pupitre-${p}`;
     card.innerHTML=`<div class="card-header">
         <div style="display:flex;align-items:center;gap:8px">
           <span class="badge badge-${p}">${p}</span>
