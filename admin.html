@@ -1,177 +1,201 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Admin — Appel Choristes</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyBqHVMzmdy-rGuUGFmciqjqF-SuwoVt_RM",
-  authDomain: "appel-choristes.firebaseapp.com",
-  databaseURL: "https://appel-choristes-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "appel-choristes",
-  storageBucket: "appel-choristes.firebasestorage.app",
-  messagingSenderId: "1032989797373",
-  appId: "1:1032989797373:web:c4ede9febbfd00253bc794"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-window.DB = { ref, set, onValue, update, remove, db };
-window.dispatchEvent(new Event('firebase-ready'));
-</script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-:root{
-  --ink:#1a1a2e;--gold:#c9a84c;--gold-light:#f0d78a;--cream:#faf8f2;
-  --S:#b5294e;--A:#7b2d8b;--T:#00897B;--B:#1a4f8b; /* Ténors en bleu-vert */
-  --S-bg:#fdf0f3;--A-bg:#f8f0fd;--T-bg:#E0F2F1;--B-bg:#f0f5fd; /* Fond clair pour Ténors */
-  --absent:#e53935;--present:#43a047;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Admin — Appel Choristes</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" async></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyBqHVMzmdy-rGuUGFmciqjqF-SuwoVt_RM",
+      authDomain: "appel-choristes.firebaseapp.com",
+      databaseURL: "https://appel-choristes-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "appel-choristes",
+      storageBucket: "appel-choristes.firebasestorage.app",
+      messagingSenderId: "1032989797373",
+      appId: "1:1032989797373:web:c4ede9febbfd00253bc794"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    window.DB = { ref, set, onValue, update, remove, db };
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+    :root{
+      --ink:#1a1a2e;--gold:#c9a84c;--gold-light:#f0d78a;--cream:#faf8f2;
+      --S:#b5294e;--A:#7b2d8b;--T:#00897B;--B:#1a4f8b;
+      --S-bg:#fdf0f3;--A-bg:#f8f0fd;--T-bg:#E0F2F1;--B-bg:#f0f5fd;
+      --absent:#e53935;--present:#43a047;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);min-height:100vh}
 
-/* PIN */
-#pin-screen{position:fixed;inset:0;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px}
-#pin-screen h1{font-family:'Playfair Display',serif;color:var(--gold);font-size:26px;margin-bottom:6px;text-align:center}
-#pin-screen p{color:rgba(255,255,255,.4);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;text-align:center}
-.pin-dots{display:flex;gap:14px;margin-bottom:28px}
-.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);transition:all .2s}
-.pin-dot.filled{background:var(--gold);border-color:var(--gold)}
-.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
-.pin-key{background:rgba(255,255,255,.08);border:none;border-radius:14px;height:64px;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:600;color:#fff;cursor:pointer;transition:all .15s}
-.pin-key:active{background:rgba(255,255,255,.2);transform:scale(.95)}
-.pin-key.del{font-size:18px;color:rgba(255,255,255,.5)}
-.pin-key.empty{background:transparent;cursor:default}
-.pin-error{color:#ef5350;font-size:13px;margin-top:14px;height:20px;text-align:center}
+    /* PIN */
+    #pin-screen{position:fixed;inset:0;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:24px}
+    #pin-screen h1{font-family:'Playfair Display',serif;color:var(--gold);font-size:26px;margin-bottom:6px;text-align:center}
+    #pin-screen p{color:rgba(255,255,255,.4);font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-bottom:36px;text-align:center}
+    .pin-dots{display:flex;gap:14px;margin-bottom:28px}
+    .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.3);transition:all .2s}
+    .pin-dot.filled{background:var(--gold);border-color:var(--gold)}
+    .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
+    .pin-key{background:rgba(255,255,255,.08);border:none;border-radius:14px;height:64px;font-family:'DM Sans',sans-serif;font-size:22px;font-weight:600;color:#fff;cursor:pointer;transition:all .15s}
+    .pin-key:active{background:rgba(255,255,255,.2);transform:scale(.95)}
+    .pin-key.del{font-size:18px;color:rgba(255,255,255,.5)}
+    .pin-key.empty{background:transparent;cursor:default}
+    .pin-error{color:#ef5350;font-size:13px;margin-top:14px;height:20px;text-align:center}
 
-/* HEADER */
-#header{background:var(--ink);padding:14px 16px 0;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,.3)}
-.header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.header-title{font-family:'Playfair Display',serif;color:var(--gold);font-size:19px}
-.header-sub{color:rgba(255,255,255,.3);font-size:10px;letter-spacing:2px;text-transform:uppercase}
-.lock-btn{background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:7px 11px;color:rgba(255,255,255,.5);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
-.tabs{display:flex;border-top:1px solid rgba(255,255,255,.08)}
-.tab-btn{flex:1;padding:10px 4px;border:none;background:transparent;color:rgba(255,255,255,.35);font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;font-family:'DM Sans',sans-serif}
-.tab-btn .ti{display:block;font-size:17px;margin-bottom:1px}
-.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold)}
+    /* HEADER */
+    #header{background:#fff;padding:14px 16px 0;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 #e8e8ec,0 2px 8px rgba(0,0,0,.06)}
+    .header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .header-title{font-family:'Playfair Display',serif;color:var(--ink);font-size:21px;line-height:1}
+    .header-sub{color:#999;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+    .lock-btn{background:#f4f4f6;border:1.5px solid #e8e8ec;border-radius:10px;padding:8px 13px;color:#888;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .lock-btn:hover{border-color:#ccc;color:var(--ink)}
+    .tabs{display:flex;border-top:1px solid #e8e8ec}
+    .tab-btn{flex:1;padding:11px 4px;border:none;background:transparent;color:#bbb;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;font-family:'DM Sans',sans-serif}
+    .tab-btn .ti{display:block;font-size:18px;margin-bottom:2px}
+    .tab-btn.active{color:var(--ink);border-bottom-color:var(--gold)}
 
-/* VIEWS */
-.view{display:none;padding:16px;max-width:680px;margin:0 auto}
-.view.active{display:block}
+    /* VIEWS */
+    .view{display:none;padding:16px;max-width:680px;margin:0 auto}
+    .view.active{display:block}
 
-/* CARDS */
-.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:12px}
-.card-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.06)}
-.card-title{font-family:'Playfair Display',serif;font-size:16px}
-.badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#fff}
-.badge-S{background:var(--S)}.badge-A{background:var(--A)}.badge-T{background:var(--T)}.badge-B{background:var(--B)}
+    /* CARDS */
+    .card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;margin-bottom:12px}
+    .card-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.06)}
+    .card-title{font-family:'Playfair Display',serif;font-size:16px}
+    .badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:#fff}
+    .badge-S{background:var(--S)}.badge-A{background:var(--A)}.badge-T{background:var(--T)}.badge-B{background:var(--B)}
 
-/* CHORISTE ROW */
-.choriste-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.04);gap:8px;transition:background .15s}
-.choriste-row:last-child{border-bottom:none}
-.choriste-name{flex:1;font-size:14px;font-weight:500}
-.choriste-name small{display:block;font-size:11px;opacity:.4;font-weight:400}
-.check-btn{width:36px;height:36px;border-radius:9px;border:2px solid #e0e0e0;background:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
-.check-btn.checked-R{background:#FFA000;border-color:#FFA000;color:#fff}
-.check-btn.checked-C{background:var(--present);border-color:var(--present);color:#fff}
+    /* CHORISTE ROW */
+    .choriste-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.04);gap:8px;transition:background .15s}
+    .choriste-row:last-child{border-bottom:none}
+    .choriste-name{flex:1;font-size:14px;font-weight:500}
+    .choriste-name small{display:block;font-size:11px;opacity:.4;font-weight:400}
+    .check-btn{width:36px;height:36px;border-radius:9px;border:2px solid #e0e0e0;background:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+    .check-btn.checked-R{background:#FFA000;border-color:#FFA000;color:#fff}
+    .check-btn.checked-C{background:var(--present);border-color:var(--present);color:#fff}
 
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-primary{background:var(--ink);color:#fff}
-.btn-gold{background:var(--gold);color:var(--ink)}
-.btn-danger{background:#ffebee;color:var(--absent)}
-.btn-green{background:#e8f5e9;color:#2e7d32}
-.btn-outline{background:transparent;border:2px solid var(--ink);color:var(--ink)}
-.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+    /* BUTTONS */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+    .btn-primary{background:var(--ink);color:#fff}
+    .btn-gold{background:var(--gold);color:var(--ink)}
+    .btn-danger{background:#ffebee;color:var(--absent)}
+    .btn-green{background:#e8f5e9;color:#2e7d32}
+    .btn-outline{background:transparent;border:2px solid var(--ink);color:var(--ink)}
+    .btn-blue{background:#e3f2fd;color:#1565c0}
+    .btn-purple{background:#f3e5f5;color:#6a1b9a}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
 
-/* FORM */
-.form-row{display:flex;gap:8px;margin-bottom:10px}
-input[type=text],select{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #e0e0e0;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:#fff;transition:border-color .2s}
-input[type=text]:focus,select:focus{border-color:var(--gold)}
-select{flex:0 0 76px}
+    /* FORM */
+    .form-row{display:flex;gap:8px;margin-bottom:10px}
+    input[type=text],input[type=email],select{flex:1;padding:10px 13px;border-radius:10px;border:1.5px solid #e0e0e0;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:#fff;transition:border-color .2s}
+    input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--gold)}
+    select{flex:0 0 76px}
 
-/* PUPIL SCROLL BUTTONS */
-.pupitre-scroll-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
+    /* PUPIL SCROLL BUTTONS */
+    .pupitre-scroll-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
 
-/* QR MODAL */
-#qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px}
-#qr-modal.open{display:flex}
-.qr-box{background:#fff;border-radius:20px;padding:26px;max-width:300px;width:100%;text-align:center}
-.qr-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px}
-.qr-box p{font-size:13px;opacity:.5;margin-bottom:14px}
-#qr-display{display:flex;justify-content:center;margin-bottom:18px}
+    /* QR MODAL */
+    #qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:20px}
+    #qr-modal.open{display:flex}
+    .qr-box{background:#fff;border-radius:20px;padding:26px;max-width:300px;width:100%;text-align:center}
+    .qr-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:4px}
+    .qr-box p{font-size:13px;opacity:.5;margin-bottom:14px}
+    #qr-display{display:flex;justify-content:center;margin-bottom:18px}
 
-/* RESET MODAL */
-#reset-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
-#reset-modal.open{display:flex}
-.reset-box{background:#fff;border-radius:20px;padding:26px;max-width:290px;width:100%;text-align:center}
-.reset-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:8px}
-.reset-box p{font-size:13px;color:#888;margin-bottom:18px}
+    /* RESET MODAL */
+    #reset-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
+    #reset-modal.open{display:flex}
+    .reset-box{background:#fff;border-radius:20px;padding:26px;max-width:290px;width:100%;text-align:center}
+    .reset-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:8px}
+    .reset-box p{font-size:13px;color:#888;margin-bottom:18px}
 
-/* IMPORT MODAL */
-#import-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
-#import-modal.open{display:flex}
-.import-box{background:#fff;border-radius:20px;padding:22px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
-.import-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:6px}
-.import-sub{font-size:13px;color:#888;margin-bottom:12px;line-height:1.5}
-.import-format{background:var(--ink);color:#fff;border-radius:10px;padding:11px 13px;font-size:12px;margin-bottom:12px;font-family:monospace;line-height:1.8}
-.import-format .ch{color:var(--gold)}
-.import-drop{border:2px dashed #e0e0e0;border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;background:#fafafa}
-.import-drop:hover,.import-drop.drag-over{border-color:var(--gold);background:#fffdf5}
-.import-drop .di{font-size:32px;margin-bottom:6px}
-.import-drop p{font-size:13px;color:#888;margin:0}
-#import-file{display:none}
-.import-preview{background:#f5f5f5;border-radius:10px;padding:11px 13px;font-size:13px;margin-bottom:12px;max-height:160px;overflow-y:auto}
-.ipr{padding:4px 0;border-bottom:1px solid #ebebeb;display:flex;gap:10px;align-items:center}
-.ipr:last-child{border-bottom:none}
-.import-err{background:#ffebee;color:var(--absent);border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px}
-.import-warn{background:#fff8e1;color:#e65100;border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px;line-height:1.5}
+    /* IMPORT MODAL */
+    #import-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
+    #import-modal.open{display:flex}
+    .import-box{background:#fff;border-radius:20px;padding:22px;max-width:400px;width:100%;max-height:90vh;overflow-y:auto}
+    .import-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:6px}
+    .import-sub{font-size:13px;color:#888;margin-bottom:12px;line-height:1.5}
+    .import-format{background:var(--ink);color:#fff;border-radius:10px;padding:11px 13px;font-size:12px;margin-bottom:12px;font-family:monospace;line-height:1.8}
+    .import-format .ch{color:var(--gold)}
+    .import-format .opt{color:rgba(255,255,255,.4)}
+    .import-drop{border:2px dashed #e0e0e0;border-radius:14px;padding:22px 16px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:12px;background:#fafafa}
+    .import-drop:hover,.import-drop.drag-over{border-color:var(--gold);background:#fffdf5}
+    .import-drop .di{font-size:32px;margin-bottom:6px}
+    .import-drop p{font-size:13px;color:#888;margin:0}
+    #import-file{display:none}
+    .import-preview{background:#f5f5f5;border-radius:10px;padding:11px 13px;font-size:13px;margin-bottom:12px;max-height:160px;overflow-y:auto}
+    .ipr{padding:4px 0;border-bottom:1px solid #ebebeb;display:flex;gap:10px;align-items:center}
+    .ipr:last-child{border-bottom:none}
+    .ipr-email{font-size:11px;color:#999;margin-left:auto}
+    .import-err{background:#ffebee;color:var(--absent);border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px}
+    .import-warn{background:#fff8e1;color:#e65100;border-radius:10px;padding:10px 13px;font-size:13px;margin-bottom:12px;line-height:1.5}
 
-/* SECTION TITLE */
-.section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.4;margin:14px 0 8px;font-weight:600}
+    /* EDIT MODAL */
+    #edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
+    #edit-modal.open{display:flex}
+    .edit-box{background:#fff;border-radius:20px;padding:26px;max-width:380px;width:100%;text-align:center}
+    .edit-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:16px}
 
-/* DASHBOARD */
-.db-global{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.db-glob-card{background:var(--ink);color:#fff;border-radius:14px;padding:14px 16px}
-.db-glob-card .dg-label{font-size:10px;opacity:.4;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
-.db-glob-card .dg-num{font-family:'Playfair Display',serif;font-size:28px}
-.db-glob-card .dg-num span{font-size:16px;opacity:.5}
-.db-glob-card.raccord .dg-num{color:#FFA000}
-.db-glob-card.concert .dg-num{color:#66BB6A}
+    /* SECTION TITLE */
+    .section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.4;margin:14px 0 8px;font-weight:600}
 
-.db-pupitre-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
-.db-p-card{border-radius:12px;padding:10px 8px;text-align:center}
-.db-p-card.S{background:var(--S-bg);color:var(--S)}
-.db-p-card.A{background:var(--A-bg);color:var(--A)}
-.db-p-card.T{background:var(--T-bg);color:var(--T)}
-.db-p-card.B{background:var(--B-bg);color:var(--B)}
-.db-p-card .dp-letter{font-family:'Playfair Display',serif;font-size:20px;font-weight:700}
-.db-p-card .dp-r{font-size:11px;opacity:.7;margin-top:2px}
-.db-p-card .dp-c{font-size:13px;font-weight:700;margin-top:1px}
+    /* DASHBOARD */
+    .db-global{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .db-glob-card{background:var(--ink);color:#fff;border-radius:14px;padding:14px 16px}
+    .db-glob-card .dg-label{font-size:10px;opacity:.4;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+    .db-glob-card .dg-num{font-family:'Playfair Display',serif;font-size:28px}
+    .db-glob-card .dg-num span{font-size:16px;opacity:.5}
+    .db-glob-card.raccord .dg-num{color:#FFA000}
+    .db-glob-card.concert .dg-num{color:#66BB6A}
 
-.absent-block{border-radius:14px;overflow:hidden;margin-bottom:10px}
-.absent-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
-.absent-header.R{background:#FFF3E0;color:#E65100}
-.absent-header.C{background:#FFEBEE;color:var(--absent)}
-.absent-header.ok{background:#E8F5E9;color:#2E7D32}
-.absent-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(0,0,0,.04);background:#fff}
-.absent-row:last-child{border-bottom:none}
-.absent-name{flex:1;font-size:14px;font-weight:500}
-.pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
-.pill-absent{background:#FFEBEE;color:var(--absent)}
-.pill-partial{background:#FFF8E1;color:#F57F17}
+    .db-pupitre-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+    .db-p-card{border-radius:12px;padding:10px 8px;text-align:center}
+    .db-p-card.S{background:var(--S-bg);color:var(--S)}
+    .db-p-card.A{background:var(--A-bg);color:var(--A)}
+    .db-p-card.T{background:var(--T-bg);color:var(--T)}
+    .db-p-card.B{background:var(--B-bg);color:var(--B)}
+    .db-p-card .dp-letter{font-family:'Playfair Display',serif;font-size:20px;font-weight:700}
+    .db-p-card .dp-r{font-size:11px;opacity:.7;margin-top:2px}
+    .db-p-card .dp-c{font-size:13px;font-weight:700;margin-top:1px}
 
-.empty-state{text-align:center;padding:28px 20px;opacity:.3}
-.empty-state .ei{font-size:32px;margin-bottom:8px}
-.empty-state p{font-size:13px}
-</style>
+    .absent-block{border-radius:14px;overflow:hidden;margin-bottom:10px}
+    .absent-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+    .absent-header.R{background:#FFF3E0;color:#E65100}
+    .absent-header.C{background:#FFEBEE;color:var(--absent)}
+    .absent-header.ok{background:#E8F5E9;color:#2E7D32}
+    .absent-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid rgba(0,0,0,.04);background:#fff}
+    .absent-row:last-child{border-bottom:none}
+    .absent-name{flex:1;font-size:14px;font-weight:500}
+    .pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
+    .pill-absent{background:#FFEBEE;color:var(--absent)}
+    .pill-partial{background:#FFF8E1;color:#F57F17}
+
+    .empty-state{text-align:center;padding:28px 20px;opacity:.3}
+    .empty-state .ei{font-size:32px;margin-bottom:8px}
+    .empty-state p{font-size:13px}
+
+    /* EMAIL MODAL */
+    #email-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
+    #email-modal.open{display:flex}
+    .email-box{background:#fff;border-radius:20px;padding:26px;max-width:380px;width:100%;text-align:center}
+    .email-box h3{font-family:"Playfair Display",serif;font-size:19px;margin-bottom:8px}
+    .email-box p{font-size:13px;color:#888;margin-bottom:16px;line-height:1.5}
+    .email-progress{background:#f0f0f0;border-radius:10px;height:10px;margin-bottom:12px;overflow:hidden}
+    .email-progress-bar{height:100%;background:var(--gold);border-radius:10px;transition:width .4s}
+    .email-log{background:#f8f8f8;border-radius:10px;padding:10px 12px;font-size:12px;max-height:140px;overflow-y:auto;text-align:left;margin-bottom:16px;font-family:monospace}
+    .email-log-ok{color:#2e7d32}.email-log-err{color:var(--absent)}.email-log-info{color:#888}
+  </style>
 </head>
 <body>
 
@@ -215,6 +239,7 @@ select{flex:0 0 76px}
   </div>
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('choristes',this)"><span class="ti">👥</span>Choristes</button>
+    <button class="tab-btn" onclick="showTab('billets',this)"><span class="ti">🎟</span>Billets</button>
     <button class="tab-btn" onclick="showTab('absents',this)"><span class="ti">🚨</span>Absents</button>
   </div>
 </div>
@@ -230,6 +255,9 @@ select{flex:0 0 76px}
       </select>
       <input type="text" id="add-nom" placeholder="Prénom Nom"/>
       <button class="btn btn-gold btn-sm" onclick="addChoriste()">＋</button>
+    </div>
+    <div class="form-row" style="margin-bottom:0">
+      <input type="email" id="add-email" placeholder="Email (optionnel)"/>
     </div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
@@ -247,6 +275,22 @@ select{flex:0 0 76px}
 
   <p class="section-title">Liste par pupitre</p>
   <div id="admin-list"></div>
+</div>
+
+<!-- VUE BILLETS -->
+<div id="view-billets" class="view" style="display:none">
+  <div class="card" style="padding:16px;margin-bottom:14px">
+    <div style="font-family:'Playfair Display',serif;font-size:17px;margin-bottom:6px">🎟 Gestion des billets</div>
+    <p style="font-size:13px;color:#888;margin-bottom:16px;line-height:1.5">
+      Imprimez tous les billets en une fois, ou envoyez chaque billet par email individuellement.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="printAllQR()">🖨 Imprimer tous</button>
+      <button class="btn btn-blue" onclick="openEmailModal()">📧 Envoyer tous par email</button>
+    </div>
+  </div>
+  <p class="section-title">Aperçu par pupitre</p>
+  <div id="billets-list"></div>
 </div>
 
 <!-- VUE ABSENTS -->
@@ -280,10 +324,12 @@ select{flex:0 0 76px}
   <div class="qr-box">
     <h3 id="qr-nom">—</h3><p id="qr-pupitre">—</p>
     <div id="qr-display"></div>
-    <div style="display:flex;gap:8px;justify-content:center">
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="printQR()">🖨 Imprimer</button>
+      <button class="btn btn-blue btn-sm" id="qr-send-btn" onclick="sendOneEmail()">📧 Envoyer</button>
       <button class="btn btn-outline btn-sm" onclick="closeQR()">Fermer</button>
     </div>
+    <div id="qr-send-status" style="margin-top:10px;font-size:12px;min-height:18px;text-align:center"></div>
   </div>
 </div>
 
@@ -303,11 +349,12 @@ select{flex:0 0 76px}
 <div id="import-modal">
   <div class="import-box">
     <h3>📥 Importer Excel</h3>
-    <p class="import-sub">Deux colonnes dans votre fichier :</p>
+    <p class="import-sub">3 colonnes dans votre fichier :</p>
     <div class="import-format">
       <span class="ch">Colonne A</span> → Nom complet<br>
-      <span class="ch">Colonne B</span> → Pupitre : S, A, T ou B<br><br>
-      <span style="opacity:.4">Ex :</span> &nbsp;Dupont Marie &nbsp; S
+      <span class="ch">Colonne B</span> → Pupitre : S, A, T ou B<br>
+      <span class="ch">Colonne C</span> → Email <span class="opt">(optionnel)</span><br><br>
+      <span style="opacity:.4">Ex :</span> &nbsp;Dupont Marie &nbsp; S &nbsp; marie@gmail.com
     </div>
     <div class="import-drop" id="import-drop"
          onclick="document.getElementById('import-file').click()"
@@ -324,277 +371,521 @@ select{flex:0 0 76px}
   </div>
 </div>
 
-<script>
-const PIN = '0692'; // Code PIN
-const PUPITRES = ['S','A','T','B'];
-const PUPITRE_LABEL = {S:'Sopranos',A:'Altos',T:'Ténors',B:'Basses'};
-const PUPITRE_BG = {S:'#fdf0f3',A:'#f8f0fd',T:'#E0F2F1',B:'#f0f5fd'};
-
-let choristes = {};
-let pinEntry = '';
-let importData = [];
-
-// ── PIN ──
-function pinKey(k) {
-  if (pinEntry.length >= 4) return;
-  pinEntry += k; updateDots();
-  if (pinEntry.length === 4) setTimeout(checkPin, 150);
-}
-function pinDel() { pinEntry = pinEntry.slice(0,-1); updateDots(); document.getElementById('pin-error').textContent=''; }
-function updateDots() { for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled',i<pinEntry.length); }
-function checkPin() {
-  if (pinEntry === PIN) {
-    document.getElementById('pin-screen').style.opacity='0';
-    setTimeout(()=>{
-      document.getElementById('pin-screen').style.display='none';
-      document.getElementById('header').style.display='block';
-      document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-      document.getElementById('view-choristes').style.display='block';
-      document.getElementById('view-choristes').classList.add('active');
-      initFirebase();
-    },300);
-  } else {
-    document.getElementById('pin-error').textContent='Code incorrect, réessayez';
-    pinEntry=''; updateDots();
-  }
-}
-function lockAdmin() {
-  pinEntry=''; updateDots();
-  document.getElementById('pin-error').textContent='';
-  document.getElementById('pin-screen').style.cssText='display:flex;opacity:1';
-  document.getElementById('header').style.display='none';
-  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-}
-
-// ── FIREBASE ──
-function initFirebase() {
-  const go = () => {
-    const {db,ref,onValue}=window.DB;
-    onValue(ref(db,'choristes'),snap=>{
-      choristes=snap.val()||{};
-      renderAll();
-    });
-  };
-  window.DB ? go() : window.addEventListener('firebase-ready',go);
-}
-
-// ── TABS ──
-function showTab(name, btn) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  btn.classList.add('active');
-
-  // Masquer toutes les vues, puis afficher celle demandée
-  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-  document.getElementById('view-' + name).style.display = 'block';
-
-  // Rendu spécifique selon l'onglet
-  if (name === 'choristes') {
-    renderAdmin();
-  } else if (name === 'absents') {
-    renderDashboard();
-  }
-}
-
-// Fonction pour scroller vers un pupitre spécifique
-function scrollToPupitre(pupitre) {
-  const element = document.getElementById(`pupitre-${pupitre}`);
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
-// ── CRUD ──
-function addChoriste() {
-  const nom=document.getElementById('add-nom').value.trim();
-  const pupitre=document.getElementById('add-pupitre').value;
-  if(!nom) return;
-  const {db,ref,set}=window.DB;
-  const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  set(ref(db,'choristes/'+id),{nom,pupitre,raccord:false,concert:false});
-  document.getElementById('add-nom').value='';
-}
-function removeChoriste(id) {
-  if(!confirm('Supprimer ce choriste ?')) return;
-  const {db,ref,remove}=window.DB; remove(ref(db,'choristes/'+id));
-}
-function togglePresence(id,champ) {
-  const {db,ref,update}=window.DB;
-  update(ref(db,'choristes/'+id),{[champ]:!choristes[id][champ]});
-}
-
-// ── QR ──
-function showQR(id) {
-  const c=choristes[id];
-  document.getElementById('qr-nom').textContent=c.nom;
-  document.getElementById('qr-pupitre').textContent=PUPITRE_LABEL[c.pupitre];
-  document.getElementById('qr-display').innerHTML='';
-  new QRCode(document.getElementById('qr-display'),{text:id,width:190,height:190,correctLevel:QRCode.CorrectLevel.H});
-  document.getElementById('qr-modal').classList.add('open');
-}
-function closeQR(){document.getElementById('qr-modal').classList.remove('open');}
-function printQR() {
-  const canvas=document.querySelector('#qr-display canvas'); if(!canvas) return;
-  const nom=document.getElementById('qr-nom').textContent;
-  const pupitre=document.getElementById('qr-pupitre').textContent;
-  const w=window.open('');
-  w.document.write(`<html><body style="text-align:center;font-family:Georgia,serif;padding:40px">
-    <h2 style="margin-bottom:4px">${nom}</h2><p style="color:#888;margin-bottom:20px">${pupitre}</p>
-    <img src="${canvas.toDataURL()}" style="width:210px"/>
-    <p style="margin-top:14px;font-size:12px;color:#aaa">Billet d'entrée — Conservez précieusement</p>
-  </body></html>`);
-  w.document.close(); setTimeout(()=>{ w.print(); w.close(); },300);
-}
-
-// ── RESET ──
-function openResetModal(){document.getElementById('reset-modal').classList.add('open');}
-function closeResetModal(){document.getElementById('reset-modal').classList.remove('open');}
-function doReset() {
-  const {db,ref,update}=window.DB;
-  Object.keys(choristes).forEach(id=>update(ref(db,'choristes/'+id),{raccord:false,concert:false}));
-  closeResetModal();
-}
-
-// ── IMPORT ──
-function openImportModal(){importData=[];document.getElementById('import-feedback').innerHTML='';document.getElementById('import-file').value='';document.getElementById('import-confirm-btn').disabled=true;document.getElementById('import-modal').classList.add('open');}
-function closeImportModal(){document.getElementById('import-modal').classList.remove('open');}
-function dragOver(e){e.preventDefault();document.getElementById('import-drop').classList.add('drag-over');}
-function dragLeave(){document.getElementById('import-drop').classList.remove('drag-over');}
-function dropFile(e){e.preventDefault();document.getElementById('import-drop').classList.remove('drag-over');handleFile(e.dataTransfer.files[0]);}
-function handleFile(file) {
-  if(!file) return;
-  if(!file.name.match(/\.xlsx?$/i)){showImportError('❌ Format non reconnu. Choisissez un fichier .xlsx');return;}
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try {
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      importData=[]; const errors=[]; const valid=['S','A','T','B'];
-      const start=(rows[0]&&rows[0][0]&&rows[0][0].toString().toLowerCase().includes('nom'))?1:0;
-      for(let i=start;i<rows.length;i++){
-        const nom=(rows[i][0]||'').toString().trim();
-        const pupitre=(rows[i][1]||'').toString().trim().toUpperCase();
-        if(!nom&&!pupitre) continue;
-        if(!nom){errors.push(`Ligne ${i+1} : nom manquant`);continue;}
-        if(!valid.includes(pupitre)){errors.push(`Ligne ${i+1} : pupitre "${pupitre}" invalide`);continue;}
-        importData.push({nom,pupitre});
-      }
-      if(!importData.length&&!errors.length){showImportError('❌ Fichier vide.');return;}
-      let html='';
-      if(errors.length) html+=`<div class="import-warn">⚠️ ${errors.length} ligne(s) ignorée(s) :<br>${errors.join('<br>')}</div>`;
-      if(importData.length){
-        html+=`<div class="import-preview"><div style="font-weight:600;margin-bottom:6px">✅ ${importData.length} choriste(s) à importer :</div>
-          ${importData.map(r=>`<div class="ipr"><span style="font-size:11px;font-weight:700;color:var(--${r.pupitre});background:var(--${r.pupitre}-bg);padding:2px 8px;border-radius:6px">${r.pupitre}</span><span>${r.nom}</span></div>`).join('')}</div>`;
-        document.getElementById('import-confirm-btn').disabled=false;
-      }
-      document.getElementById('import-feedback').innerHTML=html;
-    } catch(err){showImportError('❌ Erreur : '+err.message);}
-  };
-  reader.readAsArrayBuffer(file);
-}
-function showImportError(msg){document.getElementById('import-feedback').innerHTML=`<div class="import-err">${msg}</div>`;document.getElementById('import-confirm-btn').disabled=true;}
-function confirmImport() {
-  if(!importData.length) return;
-  const {db,ref,set}=window.DB;
-  importData.forEach(({nom,pupitre})=>{
-    const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    set(ref(db,'choristes/'+id),{nom,pupitre,raccord:false,concert:false});
-  });
-  closeImportModal();
-}
-
-// ── RENDER CHORISTES ──
-function renderAdmin() {
-  const list=document.getElementById('admin-list'); list.innerHTML='';
-  PUPITRES.forEach(p=>{
-    const members=Object.entries(choristes).filter(([,c])=>c.pupitre===p);
-    if(!members.length) return;
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px'; card.id=`pupitre-${p}`;
-    card.innerHTML=`<div class="card-header">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="badge badge-${p}">${p}</span>
-          <span class="card-title">${PUPITRE_LABEL[p]}</span>
-        </div>
-        <span style="font-size:12px;opacity:.45">${members.length} chanteur${members.length>1?'s':''}</span>
+<!-- MODALE MODIFIER CHORISTE -->
+<div id="edit-modal">
+  <div class="edit-box">
+    <h3>✏️ Modifier le choriste</h3>
+    <div style="margin-bottom:16px">
+      <div class="form-row" style="margin-bottom:10px">
+        <select id="edit-pupitre">
+          <option value="S">S</option>
+          <option value="A">A</option>
+          <option value="T">T</option>
+          <option value="B">B</option>
+        </select>
+        <input type="text" id="edit-nom" placeholder="Prénom Nom"/>
       </div>
-      <div>${members.map(([id,c])=>`
-        <div class="choriste-row" style="background:${c.raccord&&c.concert?PUPITRE_BG[p]:'#fff'}">
-          <div class="choriste-name">${c.nom}
-            <small>${c.raccord&&c.concert?'✓ raccord + concert':c.raccord?'✓ raccord':c.concert?'✓ concert':'absent'}</small>
+      <div class="form-row">
+        <input type="email" id="edit-email" placeholder="Email (optionnel)"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeEditModal()">Annuler</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL SEND MODAL -->
+<div id="email-modal">
+  <div class="email-box">
+    <h3 id="email-modal-title">📧 Envoi des billets</h3>
+    <p id="email-modal-sub">Préparation…</p>
+    <div class="email-progress"><div class="email-progress-bar" id="email-bar" style="width:0%"></div></div>
+    <div class="email-log" id="email-log"></div>
+    <button class="btn btn-outline" id="email-close-btn" onclick="closeEmailModal()" disabled>Fermer</button>
+  </div>
+</div>
+
+<script>
+  // Configuration EmailJS (à remplacer par tes propres clés)
+  const EMAILJS_PUBLIC  = 'YkvQcXLdKkT33yOVo';
+  const EMAILJS_SERVICE = 'service_h9t254k';
+  const EMAILJS_TEMPLATE= 'template_9n2tqpt';
+
+  // Initialisation dynamique d'EmailJS
+  function initEmailJS() {
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init(EMAILJS_PUBLIC);
+    } else {
+      setTimeout(initEmailJS, 100);
+    }
+  }
+  initEmailJS();
+
+  const PIN = '0692';
+  const PUPITRES = ['S','A','T','B'];
+  const PUPITRE_LABEL = {S:'Sopranos',A:'Altos',T:'Ténors',B:'Basses'};
+  const PUPITRE_BG = {S:'#fdf0f3',A:'#f8f0fd',T:'#E0F2F1',B:'#f0f5fd'};
+
+  let choristes = {};
+  let pinEntry = '';
+  let importData = [];
+  let currentQRid = null;
+  let currentEditId = null; // Pour stocker l'ID du choriste en cours de modification
+
+  // ── PIN ──
+  function pinKey(k) {
+    if (pinEntry.length >= 4) return;
+    pinEntry += k; updateDots();
+    if (pinEntry.length === 4) setTimeout(checkPin, 150);
+  }
+  function pinDel() { pinEntry = pinEntry.slice(0,-1); updateDots(); document.getElementById('pin-error').textContent=''; }
+  function updateDots() { for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled',i<pinEntry.length); }
+  function checkPin() {
+    if (pinEntry === PIN) {
+      document.getElementById('pin-screen').style.opacity='0';
+      setTimeout(()=>{
+        document.getElementById('pin-screen').style.display='none';
+        document.getElementById('header').style.display='block';
+        document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+        document.getElementById('view-choristes').style.display='block';
+        document.getElementById('view-choristes').classList.add('active');
+        initFirebase();
+      },300);
+    } else {
+      document.getElementById('pin-error').textContent='Code incorrect, réessayez';
+      pinEntry=''; updateDots();
+    }
+  }
+  function lockAdmin() {
+    pinEntry=''; updateDots();
+    document.getElementById('pin-error').textContent='';
+    document.getElementById('pin-screen').style.cssText='display:flex;opacity:1';
+    document.getElementById('header').style.display='none';
+    document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  }
+
+  // ── FIREBASE ──
+  function initFirebase() {
+    const go = () => {
+      const {db,ref,onValue}=window.DB;
+      onValue(ref(db,'choristes'),snap=>{
+        choristes=snap.val()||{};
+        renderAll();
+      });
+    };
+    window.DB ? go() : window.addEventListener('firebase-ready',go);
+  }
+
+  // ── TABS ──
+  function showTab(name, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    btn.classList.add('active');
+
+    document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+    document.getElementById('view-' + name).style.display = 'block';
+
+    if (name === 'choristes') {
+      renderAdmin();
+    } else if (name === 'absents') {
+      renderDashboard();
+    } else if (name === 'billets') {
+      renderBillets();
+    }
+  }
+
+  // Fonction pour scroller vers un pupitre spécifique
+  function scrollToPupitre(pupitre) {
+    const element = document.getElementById(`pupitre-${pupitre}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  // ── CRUD ──
+  function addChoriste() {
+    const nom=document.getElementById('add-nom').value.trim();
+    const pupitre=document.getElementById('add-pupitre').value;
+    if(!nom) return;
+    const {db,ref,set}=window.DB;
+    const email=(document.getElementById('add-email')||{}).value?.trim()||'';
+    const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    set(ref(db,'choristes/'+id),{nom,pupitre,email:email||'',raccord:false,concert:false});
+    document.getElementById('add-nom').value='';
+    const emailEl=document.getElementById('add-email');
+    if(emailEl) emailEl.value='';
+  }
+
+  function removeChoriste(id) {
+    if(!confirm('Supprimer ce choriste ?')) return;
+    const {db,ref,remove}=window.DB; remove(ref(db,'choristes/'+id));
+  }
+
+  function togglePresence(id,champ) {
+    const {db,ref,update}=window.DB;
+    update(ref(db,'choristes/'+id),{[champ]:!choristes[id][champ]});
+  }
+
+  // ── MODIFICATION CHORISTE ──
+  function openEditModal(id) {
+    const c = choristes[id];
+    currentEditId = id;
+    document.getElementById('edit-nom').value = c.nom;
+    document.getElementById('edit-pupitre').value = c.pupitre;
+    document.getElementById('edit-email').value = c.email || '';
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').classList.remove('open');
+    currentEditId = null;
+  }
+
+  function saveEdit() {
+    if (!currentEditId) return;
+
+    const nom = document.getElementById('edit-nom').value.trim();
+    const pupitre = document.getElementById('edit-pupitre').value;
+    const email = document.getElementById('edit-email').value.trim();
+
+    if (!nom) {
+      alert('Le nom ne peut pas être vide !');
+      return;
+    }
+
+    const { db, ref, update } = window.DB;
+    update(ref(db, 'choristes/' + currentEditId), {
+      nom: nom,
+      pupitre: pupitre,
+      email: email || ''
+    });
+
+    closeEditModal();
+  }
+
+  // ── QR ──
+  function showQR(id) {
+    const c=choristes[id]; currentQRid=id;
+    document.getElementById('qr-nom').textContent=c.nom;
+    document.getElementById('qr-pupitre').textContent=PUPITRE_LABEL[c.pupitre];
+    document.getElementById('qr-display').innerHTML='';
+    document.getElementById('qr-send-status').textContent='';
+    const btn=document.getElementById('qr-send-btn');
+    btn.textContent='📧 Envoyer'; btn.disabled=!c.email;
+    btn.title=c.email?'Envoyer par email':'Pas d\'email renseigné';
+    new QRCode(document.getElementById('qr-display'),{text:id,width:190,height:190,correctLevel:QRCode.CorrectLevel.H});
+    document.getElementById('qr-modal').classList.add('open');
+  }
+  function closeQR(){document.getElementById('qr-modal').classList.remove('open');currentQRid=null;}
+  function printQR() {
+    const canvas=document.querySelector('#qr-display canvas'); if(!canvas) return;
+    const nom=document.getElementById('qr-nom').textContent;
+    const pupitre=document.getElementById('qr-pupitre').textContent;
+    const w=window.open('');
+    w.document.write(`<html><body style="text-align:center;font-family:Georgia,serif;padding:40px">
+      <h2 style="margin-bottom:4px">${nom}</h2><p style="color:#888;margin-bottom:20px">${pupitre}</p>
+      <img src="${canvas.toDataURL()}" style="width:210px"/>
+      <p style="margin-top:14px;font-size:12px;color:#aaa">Billet d'entrée — Conservez précieusement</p>
+    </body></html>`);
+    w.document.close(); setTimeout(()=>{ w.print(); w.close(); },300);
+  }
+
+  // ── RESET ──
+  function openResetModal(){document.getElementById('reset-modal').classList.add('open');}
+  function closeResetModal(){document.getElementById('reset-modal').classList.remove('open');}
+  function doReset() {
+    const {db,ref,update}=window.DB;
+    Object.keys(choristes).forEach(id=>update(ref(db,'choristes/'+id),{raccord:false,concert:false}));
+    closeResetModal();
+  }
+
+  // ── IMPORT ──
+  function openImportModal(){importData=[];document.getElementById('import-feedback').innerHTML='';document.getElementById('import-file').value='';document.getElementById('import-confirm-btn').disabled=true;document.getElementById('import-modal').classList.add('open');}
+  function closeImportModal(){document.getElementById('import-modal').classList.remove('open');}
+  function dragOver(e){e.preventDefault();document.getElementById('import-drop').classList.add('drag-over');}
+  function dragLeave(){document.getElementById('import-drop').classList.remove('drag-over');}
+  function dropFile(e){e.preventDefault();document.getElementById('import-drop').classList.remove('drag-over');handleFile(e.dataTransfer.files[0]);}
+  function handleFile(file) {
+    if(!file) return;
+    if(!file.name.match(/\.xlsx?$/i)){showImportError('❌ Format non reconnu. Choisissez un fichier .xlsx');return;}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try {
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        importData=[]; const errors=[]; const valid=['S','A','T','B'];
+        const start=(rows[0]&&rows[0][0]&&rows[0][0].toString().toLowerCase().includes('nom'))?1:0;
+        for(let i=start;i<rows.length;i++){
+          const nom=(rows[i][0]||'').toString().trim();
+          const pupitre=(rows[i][1]||'').toString().trim().toUpperCase();
+          if(!nom&&!pupitre) continue;
+          if(!nom){errors.push(`Ligne ${i+1} : nom manquant`);continue;}
+          if(!valid.includes(pupitre)){errors.push(`Ligne ${i+1} : pupitre "${pupitre}" invalide`);continue;}
+          const email=(rows[i][2]||'').toString().trim().toLowerCase();
+          importData.push({nom,pupitre,email});
+        }
+        if(!importData.length&&!errors.length){showImportError('❌ Fichier vide.');return;}
+        let html='';
+        if(errors.length) html+=`<div class="import-warn">⚠️ ${errors.length} ligne(s) ignorée(s) :<br>${errors.join('<br>')}</div>`;
+        if(importData.length){
+          html+=`<div class="import-preview"><div style="font-weight:600;margin-bottom:6px">✅ ${importData.length} choriste(s) à importer :</div>
+            ${importData.map(r=>`<div class="ipr"><span style="font-size:11px;font-weight:700;color:var(--${r.pupitre});background:var(--${r.pupitre}-bg);padding:2px 8px;border-radius:6px">${r.pupitre}</span><span style="flex:1">${r.nom}</span>${r.email?`<span class="ipr-email">✉ ${r.email}</span>`:'<span class="ipr-email" style="color:#ddd">sans email</span>'}</div>`).join('')}</div>`;
+          document.getElementById('import-confirm-btn').disabled=false;
+        }
+        document.getElementById('import-feedback').innerHTML=html;
+      } catch(err){showImportError('❌ Erreur : '+err.message);}
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  function showImportError(msg){document.getElementById('import-feedback').innerHTML=`<div class="import-err">${msg}</div>`;document.getElementById('import-confirm-btn').disabled=true;}
+  function confirmImport() {
+    if(!importData.length) return;
+    const {db,ref,set}=window.DB;
+    importData.forEach(({nom,pupitre,email})=>{
+      const id='c_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      set(ref(db,'choristes/'+id),{nom,pupitre,email:email||'',raccord:false,concert:false});
+    });
+    closeImportModal();
+  }
+
+  // ── EMAIL INDIVIDUEL ──
+  async function sendOneEmail(){
+    const c=choristes[currentQRid]; if(!c||!c.email)return;
+    const canvas=document.querySelector('#qr-display canvas'); if(!canvas)return;
+    const btn=document.getElementById('qr-send-btn');
+    const status=document.getElementById('qr-send-status');
+    btn.disabled=true; btn.textContent='Envoi…';
+    status.style.color='#888'; status.textContent='Envoi en cours…';
+    try {
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+        to_email: c.email,
+        nom: c.nom,
+        pupitre: PUPITRE_LABEL[c.pupitre],
+        qr_url: canvas.toDataURL('image/png'),
+      });
+      status.style.color='#2e7d32'; status.textContent='✅ Email envoyé !';
+      btn.textContent='✅ Envoyé';
+    } catch(e){
+      status.style.color='#c62828'; status.textContent='❌ Erreur : '+(e.text||e.message||'Inconnue');
+      btn.disabled=false; btn.textContent='📧 Réessayer';
+    }
+  }
+
+  // ── IMPRESSION GROUPÉE ──
+  function printAllQR(){
+    const all=Object.entries(choristes);
+    if(!all.length){alert('Aucun choriste dans la liste.');return;}
+    const w=window.open('');
+    const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(tmp);
+    const pages=[];
+    let done=0;
+    all.forEach(([id,c])=>{
+      const div=document.createElement('div'); tmp.appendChild(div);
+      new QRCode(div,{text:id,width:250,height:250,correctLevel:QRCode.CorrectLevel.H});
+      setTimeout(()=>{
+        const canvas=div.querySelector('canvas');
+        if(canvas) pages.push(billetHTML(c.nom,PUPITRE_LABEL[c.pupitre],canvas.toDataURL()));
+        done++;
+        if(done===all.length){
+          document.body.removeChild(tmp);
+          w.document.write(`<html><head><style>
+            body{margin:0;padding:0;font-family:Georgia,serif}
+            .page{page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;text-align:center}
+            .page:last-child{page-break-after:avoid}
+            h2{font-size:28px;margin-bottom:8px}p{color:#888;font-size:16px;margin-bottom:24px}
+            img{width:250px;border-radius:12px}.foot{margin-top:20px;font-size:13px;color:#bbb}
+          </style></head><body>${pages.join('')}</body></html>`);
+          w.document.close(); setTimeout(()=>{w.print();},500);
+        }
+      },300);
+    });
+  }
+
+  function billetHTML(nom,pupitre,dataUrl){
+    return `<div class="page"><h2>${nom}</h2><p>${pupitre}</p><img src="${dataUrl}"/><div class="foot">Billet d'entrée — Conservez précieusement</div></div>`;
+  }
+
+  // ── ENVOI EMAIL GROUPÉ ──
+  async function openEmailModal(){
+    const withEmail=Object.entries(choristes).filter(([,c])=>c.email);
+    const without=Object.entries(choristes).filter(([,c])=>!c.email);
+    if(!withEmail.length){alert('Aucun choriste n\'a d\'email renseigné.');return;}
+    document.getElementById('email-modal-title').textContent='📧 Envoi des billets';
+    document.getElementById('email-modal-sub').textContent=
+      `${withEmail.length} email(s) à envoyer${without.length?' · '+without.length+' sans email (ignorés)':''}`;
+    document.getElementById('email-bar').style.width='0%';
+    document.getElementById('email-log').innerHTML='<span class="email-log-info">Démarrage…</span><br>';
+    document.getElementById('email-close-btn').disabled=true;
+    document.getElementById('email-modal').classList.add('open');
+    const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(tmp);
+    let sent=0, errors=0;
+    const log=document.getElementById('email-log');
+    const bar=document.getElementById('email-bar');
+    for(let i=0;i<withEmail.length;i++){
+      const [id,c]=withEmail[i];
+      const div=document.createElement('div'); tmp.appendChild(div);
+      new QRCode(div,{text:id,width:200,height:200,correctLevel:QRCode.CorrectLevel.H});
+      await new Promise(r=>setTimeout(r,350));
+      const canvas=div.querySelector('canvas');
+      if(!canvas){errors++;log.innerHTML+=`<span class="email-log-err">❌ ${c.nom} — QR non généré</span><br>`;continue;}
+      try {
+        await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+          to_email: c.email, nom: c.nom, pupitre: PUPITRE_LABEL[c.pupitre],
+          qr_url: canvas.toDataURL('image/png'),
+        });
+        sent++;
+        log.innerHTML+=`<span class="email-log-ok">✅ ${c.nom} → ${c.email}</span><br>`;
+      } catch(e){
+        errors++;
+        log.innerHTML+=`<span class="email-log-err">❌ ${c.nom} — ${e.text||'Erreur'}</span><br>`;
+      }
+      log.scrollTop=log.scrollHeight;
+      bar.style.width=Math.round(((i+1)/withEmail.length)*100)+'%';
+      await new Promise(r=>setTimeout(r,200));
+    }
+    document.body.removeChild(tmp);
+    document.getElementById('email-modal-sub').textContent=
+      `Terminé : ${sent} envoyé(s)${errors?' · '+errors+' erreur(s)':''}`;
+    document.getElementById('email-close-btn').disabled=false;
+  }
+  function closeEmailModal(){document.getElementById('email-modal').classList.remove('open');}
+
+  // ── RENDER BILLETS ──
+  function renderBillets(){
+    const list=document.getElementById('billets-list'); list.innerHTML='';
+    const all=Object.entries(choristes);
+    if(!all.length){list.innerHTML=`<div class="empty-state"><div class="ei">🎟</div><p>Aucun choriste.</p></div>`;return;}
+    const withMail=all.filter(([,c])=>c.email).length;
+    list.innerHTML=`<div class="card" style="padding:14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;font-weight:600">${all.length} choriste(s) au total</span>
+      <span style="font-size:13px;color:${withMail?'#2e7d32':'#999'}">✉ ${withMail} avec email</span>
+    </div>
+    ${PUPITRES.map(p=>{
+      const pm=all.filter(([,c])=>c.pupitre===p); if(!pm.length)return'';
+      return `<div class="card" style="margin-bottom:12px">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge badge-${p}">${p}</span>
+            <span class="card-title">${PUPITRE_LABEL[p]}</span>
           </div>
-          <button class="check-btn ${c.raccord?'checked-R':''}" onclick="togglePresence('${id}','raccord')">R</button>
-          <button class="check-btn ${c.concert?'checked-C':''}" onclick="togglePresence('${id}','concert')">C</button>
-          <button class="btn btn-sm" onclick="showQR('${id}')" style="background:#f5f5f5;padding:7px 9px">⊞</button>
-          <button class="btn btn-sm btn-danger" onclick="removeChoriste('${id}')" style="padding:7px 9px">✕</button>
-        </div>`).join('')}</div>`;
-    list.appendChild(card);
-  });
-  if(!Object.keys(choristes).length)
-    list.innerHTML=`<div class="empty-state"><div class="ei">🎶</div><p>Aucun choriste. Ajoutez-en ou importez un fichier Excel.</p></div>`;
-}
-
-// ── RENDER DASHBOARD (absents uniquement) ──
-function renderDashboard() {
-  const all=Object.values(choristes);
-  const total=all.length;
-  const nR=all.filter(c=>c.raccord).length;
-  const nC=all.filter(c=>c.concert).length;
-
-  document.getElementById('db-raccord-num').innerHTML=`${nR}<span>/${total}</span>`;
-  document.getElementById('db-concert-num').innerHTML=`${nC}<span>/${total}</span>`;
-
-  document.getElementById('db-pupitre-grid').innerHTML=PUPITRES.map(p=>{
-    const pm=all.filter(c=>c.pupitre===p);
-    const pr=pm.filter(c=>c.raccord).length;
-    const pc=pm.filter(c=>c.concert).length;
-    return `<div class="db-p-card ${p}">
-      <div class="dp-letter">${p}</div>
-      <div class="dp-r">R: ${pr}/${pm.length}</div>
-      <div class="dp-c">C: ${pc}/${pm.length}</div>
-    </div>`;
-  }).join('');
-
-  // Absents raccord
-  const absR=Object.entries(choristes).filter(([,c])=>!c.raccord);
-  const boxR=document.getElementById('db-absents-R');
-  if(!absR.length){
-    boxR.innerHTML=`<div class="absent-block"><div class="absent-header ok">✅ Tous présents au raccord</div></div>`;
-  } else {
-    boxR.innerHTML=`<div class="absent-block">
-      <div class="absent-header R">⚠️ ${absR.length} absent${absR.length>1?'s':''} au raccord</div>
-      ${absR.map(([,c])=>`<div class="absent-row">
-        <span class="badge badge-${c.pupitre}" style="width:24px;height:24px;font-size:11px;flex-shrink:0">${c.pupitre}</span>
-        <span class="absent-name">${c.nom}</span>
-      </div>`).join('')}
-    </div>`;
+        </div>
+        ${pm.map(([,c])=>`<div class="choriste-row">
+          <div class="choriste-name">${c.nom}<small>${c.email?'✉ '+c.email:'<span style="opacity:.3">sans email</span>'}</small></div>
+          <span style="font-size:18px">${c.email?'✅':'⚪'}</span>
+        </div>`).join('')}
+      </div>`;
+    }).join('')}`;
   }
 
-  // Absents concert
-  const absC=Object.entries(choristes).filter(([,c])=>!c.concert);
-  const boxC=document.getElementById('db-absents-C');
-  if(!absC.length){
-    boxC.innerHTML=`<div class="absent-block"><div class="absent-header ok">✅ Tous présents au concert</div></div>`;
-  } else {
-    boxC.innerHTML=`<div class="absent-block">
-      <div class="absent-header C">🚨 ${absC.length} absent${absC.length>1?'s':''} au concert</div>
-      ${absC.map(([,c])=>`<div class="absent-row">
-        <span class="badge badge-${c.pupitre}" style="width:24px;height:24px;font-size:11px;flex-shrink:0">${c.pupitre}</span>
-        <span class="absent-name">${c.nom}</span>
-        <span class="pill ${c.raccord?'pill-partial':'pill-absent'}">${c.raccord?'Raccord ✓':'Absent'}</span>
-      </div>`).join('')}
-    </div>`;
+  // ── RENDER CHORISTES ──
+  function renderAdmin() {
+    const list = document.getElementById('admin-list');
+    list.innerHTML = '';
+    PUPITRES.forEach(p => {
+      const members = Object.entries(choristes).filter(([, c]) => c.pupitre === p);
+      if (!members.length) return;
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.marginBottom = '12px';
+      card.id = `pupitre-${p}`;
+      card.innerHTML = `
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge badge-${p}">${p}</span>
+            <span class="card-title">${PUPITRE_LABEL[p]}</span>
+          </div>
+          <span style="font-size:12px;opacity:.45">${members.length} chanteur${members.length > 1 ? 's' : ''}</span>
+        </div>
+        <div>
+          ${members.map(([id, c]) => `
+            <div class="choriste-row" style="background:${c.raccord && c.concert ? PUPITRE_BG[p] : '#fff'}">
+              <div class="choriste-name">
+                ${c.nom}
+                <small>${c.email || '<em style="opacity:.5">sans email</em>'}</small>
+              </div>
+              <button class="check-btn ${c.raccord ? 'checked-R' : ''}" onclick="togglePresence('${id}','raccord')">R</button>
+              <button class="check-btn ${c.concert ? 'checked-C' : ''}" onclick="togglePresence('${id}','concert')">C</button>
+              <button class="btn btn-sm" onclick="showQR('${id}')" style="background:#f5f5f5;padding:7px 9px" title="QR / Email">⊞</button>
+              <button class="btn btn-sm btn-outline" onclick="openEditModal('${id}')" style="padding:7px 9px">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="removeChoriste('${id}')" style="padding:7px 9px">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      list.appendChild(card);
+    });
+    if (!Object.keys(choristes).length) {
+      list.innerHTML = `<div class="empty-state"><div class="ei">🎶</div><p>Aucun choriste. Ajoutez-en ou importez un fichier Excel.</p></div>`;
+    }
   }
-}
 
-// ── RENDER ALL ──
-function renderAll() {
-  renderAdmin();
-  renderDashboard(); // On render aussi le dashboard pour qu'il soit prêt
-}
+  // ── RENDER DASHBOARD (absents uniquement) ──
+  function renderDashboard() {
+    const all=Object.values(choristes);
+    const total=all.length;
+    const nR=all.filter(c=>c.raccord).length;
+    const nC=all.filter(c=>c.concert).length;
 
-document.getElementById('add-nom').addEventListener('keydown',e=>{if(e.key==='Enter') addChoriste();});
+    document.getElementById('db-raccord-num').innerHTML=`${nR}<span>/${total}</span>`;
+    document.getElementById('db-concert-num').innerHTML=`${nC}<span>/${total}</span>`;
+
+    document.getElementById('db-pupitre-grid').innerHTML=PUPITRES.map(p=>{
+      const pm=all.filter(c=>c.pupitre===p);
+      const pr=pm.filter(c=>c.raccord).length;
+      const pc=pm.filter(c=>c.concert).length;
+      return `<div class="db-p-card ${p}">
+        <div class="dp-letter">${p}</div>
+        <div class="dp-r">R: ${pr}/${pm.length}</div>
+        <div class="dp-c">C: ${pc}/${pm.length}</div>
+      </div>`;
+    }).join('');
+
+    // Absents raccord
+    const absR=Object.entries(choristes).filter(([,c])=>!c.raccord);
+    const boxR=document.getElementById('db-absents-R');
+    if(!absR.length){
+      boxR.innerHTML=`<div class="absent-block"><div class="absent-header ok">✅ Tous présents au raccord</div></div>`;
+    } else {
+      boxR.innerHTML=`<div class="absent-block">
+        <div class="absent-header R">⚠️ ${absR.length} absent${absR.length>1?'s':''} au raccord</div>
+        ${absR.map(([,c])=>`<div class="absent-row">
+          <span class="badge badge-${c.pupitre}" style="width:24px;height:24px;font-size:11px;flex-shrink:0">${c.pupitre}</span>
+          <span class="absent-name">${c.nom}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    // Absents concert
+    const absC=Object.entries(choristes).filter(([,c])=>!c.concert);
+    const boxC=document.getElementById('db-absents-C');
+    if(!absC.length){
+      boxC.innerHTML=`<div class="absent-block"><div class="absent-header ok">✅ Tous présents au concert</div></div>`;
+    } else {
+      boxC.innerHTML=`<div class="absent-block">
+        <div class="absent-header C">🚨 ${absC.length} absent${absC.length>1?'s':''} au concert</div>
+        ${absC.map(([,c])=>`<div class="absent-row">
+          <span class="badge badge-${c.pupitre}" style="width:24px;height:24px;font-size:11px;flex-shrink:0">${c.pupitre}</span>
+          <span class="absent-name">${c.nom}</span>
+          <span class="pill ${c.raccord?'pill-partial':'pill-absent'}">${c.raccord?'Raccord ✓':'Absent'}</span>
+        </div>`).join('')}
+      </div>`;
+    }
+  }
+
+  // ── RENDER ALL ──
+  function renderAll() {
+    renderAdmin();
+    renderDashboard();
+    renderBillets();
+  }
+
+  document.getElementById('add-nom').addEventListener('keydown',e=>{if(e.key==='Enter') addChoriste();});
 </script>
 </body>
 </html>
