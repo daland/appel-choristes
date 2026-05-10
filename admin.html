@@ -333,7 +333,8 @@ function checkPin() {
     setTimeout(()=>{
       document.getElementById('pin-screen').style.display='none';
       document.getElementById('header').style.display='block';
-      document.querySelectorAll('.view').forEach(v=>v.style.display='block');
+     document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+	 document.getElementById('view-choristes').style.display='block';
       initFirebase();
     },300);
   } else {
@@ -367,6 +368,10 @@ function showTab(name, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   btn.classList.add('active');
+  
+  // Masquer toutes les vues, puis afficher celle demandée
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
+  document.getElementById('view-' + name).style.display = 'block';
 
   // Rendu spécifique selon l'onglet
   if (name === 'choristes') {
