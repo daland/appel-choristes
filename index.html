@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appel Choristes — Accueil</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+    :root {
+      --ink: #1a1a2e;
+      --gold: #c9a84c;
+      --raccord: #E65100;
+      --concert: #1B5E20;
+      --grey: #f4f4f6;
+      --border: #e8e8ec;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--grey);
+      color: var(--ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 48px;
+      margin-bottom: 10px;
+      color: var(--ink);
+    }
+
+    .title {
+      font-size: 24px;
+      margin-bottom: 40px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .choice-btn {
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 24px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .choice-btn:hover {
+      border-color: var(--gold);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .choice-btn.admin {
+      border-color: var(--raccord);
+      color: var(--raccord);
+    }
+
+    .choice-btn.admin:hover {
+      background: var(--raccord-bg);
+    }
+
+    .choice-btn.regisseur {
+      border-color: var(--concert);
+      color: var(--concert);
+    }
+
+    .choice-btn.regisseur:hover {
+      background: var(--concert-bg);
+    }
+
+    .choice-btn .emoji {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">🎵</div>
+  <div class="title">Appel Choristes</div>
+
+  <div class="button-container">
+    <a href="admin.html" class="choice-btn admin">
+      <span class="emoji">👑</span>
+      Page Admin
+    </a>
+    <a href="regisseur.html" class="choice-btn regisseur">
+      <span class="emoji">📱</span>
+      Page Régisseur
+    </a>
+  </div>
+</body>
+</html>
