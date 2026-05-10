@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Régisseur — Appel Choristes</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyBqHVMzmdy-rGuUGFmciqjqF-SuwoVt_RM",
+  authDomain: "appel-choristes.firebaseapp.com",
+  databaseURL: "https://appel-choristes-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "appel-choristes",
+  storageBucket: "appel-choristes.firebasestorage.app",
+  messagingSenderId: "1032989797373",
+  appId: "1:1032989797373:web:c4ede9febbfd00253bc794"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window.DB = { ref, onValue, update, db };
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --ink:#1a1a2e;
+  --gold:#c9a84c;
+  --S:#b5294e;--A:#7b2d8b;--T:#1a7a4a;--B:#1a4f8b;
+  --S-bg:#fdf0f3;--A-bg:#f8f0fd;--T-bg:#f0fdf6;--B-bg:#f0f5fd;
+  --raccord:#E65100;--raccord-bg:#FFF3E0;--raccord-border:#FFB74D;
+  --concert:#1B5E20;--concert-bg:#E8F5E9;--concert-border:#66BB6A;
+  --absent:#C62828;--absent-bg:#FFEBEE;
+  --grey:#f4f4f6;--border:#e8e8ec;--text-soft:#888;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);display:flex;flex-direction:column}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;transition:opacity .4s}
+.ni{font-size:44px;margin-bottom:14px;animation:bounce 1.2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+#splash p{color:#aaa;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+
+/* HEADER */
+#header{background:#fff;padding:14px 16px 0;flex-shrink:0;box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,.06)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.htitle{font-family:'Playfair Display',serif;color:var(--ink);font-size:21px;line-height:1}
+.hsub{color:var(--text-soft);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+
+/* LIVE PILL */
+.live-pill{display:flex;align-items:center;gap:8px;border-radius:20px;padding:8px 16px;font-size:17px;font-weight:700;transition:all .3s}
+.live-pill.R{background:var(--raccord-bg);color:var(--raccord);border:2px solid var(--raccord-border)}
+.live-pill.C{background:var(--concert-bg);color:var(--concert);border:2px solid var(--concert-border)}
+.live-dot{width:10px;height:10px;border-radius:50%;animation:pulse 1s infinite;flex-shrink:0}
+.dot-R{background:var(--raccord)}.dot-C{background:var(--concert)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MODE BUTTONS */
+.mode-strip{display:flex;gap:10px;margin-bottom:12px}
+.mode-btn{flex:1;padding:12px 8px;border-radius:12px;border:2px solid var(--border);background:#fff;color:#aaa;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.mode-btn.active-R{background:var(--raccord-bg);border-color:var(--raccord);color:var(--raccord)}
+.mode-btn.active-C{background:var(--concert-bg);border-color:var(--concert);color:var(--concert)}
+
+/* NAV TABS */
+.nav-tabs{display:flex;border-top:1px solid var(--border)}
+.nav-tab{flex:1;padding:10px 4px;border:none;background:transparent;color:#bbb;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.nav-tab .ti{display:block;font-size:18px;margin-bottom:2px}
+.nav-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+
+/* VIEWS */
+.rview{display:none;flex:1;overflow:hidden}
+.rview.active{display:flex;flex-direction:column}
+
+/* ── SCANNER VIEW ── */
+#vscanner{padding:14px 14px;gap:12px;align-items:stretch;overflow:hidden}
+
+/* RESULT BANNER */
+#result-box{flex-shrink:0;min-height:0}
+.result{border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;animation:popIn .2s ease;border:2px solid}
+.result-ok {background:var(--concert-bg);border-color:var(--concert-border)}
+.result-dup{background:#FFF8E1;border-color:#FFB300}
+.result-err{background:var(--absent-bg);border-color:#EF9A9A}
+.result-icon{font-size:32px;flex-shrink:0}
+.result-body{flex:1;min-width:0}
+.result-name{font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-detail{font-size:14px;color:var(--text-soft);margin-top:3px}
+.result-tag{display:inline-block;margin-top:6px;padding:4px 12px;border-radius:8px;font-size:13px;font-weight:700}
+.result-ok .result-tag{background:var(--concert);color:#fff}
+.result-dup .result-tag{background:#FF8F00;color:#fff}
+.result-err .result-tag{background:var(--absent);color:#fff}
+@keyframes popIn{from{transform:translateY(-4px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* SCANNER CARD */
+.scanner-wrap{flex-shrink:0;display:flex;justify-content:center}
+.scanner-card{width:230px;height:230px;border-radius:18px;overflow:hidden;background:#000;box-shadow:0 4px 20px rgba(0,0,0,.15);border:3px solid var(--border)}
+#reader{width:230px !important;height:230px !important}
+#reader video{width:230px !important;height:230px !important;object-fit:cover;border-radius:0}
+#reader img{display:none !important}
+#reader>div:not(:has(video)){display:none!important}
+
+.scan-hint{text-align:center;font-size:13px;color:#bbb;flex-shrink:0}
+
+/* Bouton pour activer/désactiver la caméra */
+.toggle-camera-btn {
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.toggle-camera-btn:active {
+  background: var(--grey);
+}
+
+.toggle-camera-btn.camera-off {
+  background: var(--absent-bg);
+  border-color: var(--absent);
+  color: var(--absent);
+}
+
+.toggle-camera-btn.camera-off #camera-icon {
+  opacity: 0.5;
+}
+
+/* COUNTER STRIP */
+#counter-container {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.counter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cs {
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+  background: #fff;
+  border: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cs-letter {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.cs-r, .cs-c {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+  line-height: 1.2;
+  transition: all 0.2s;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* Mode Raccord : R en orange et plus gros */
+#counter-container.mode-R .cs-r {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--raccord);
+}
+
+/* Mode Concert : C en vert et plus gros */
+#counter-container.mode-C .cs-c {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--concert);
+}
+
+/* Couleurs des lettres des pupitres (S, A, T, B) */
+.cs.S .cs-letter { color: var(--S); }
+.cs.A .cs-letter { color: var(--A); }
+.cs.T .cs-letter { color: var(--T); }
+.cs.B .cs-letter { color: var(--B); }
+
+/* ── LIST VIEW ── */
+#vlist{overflow:hidden}
+.list-scroll{flex:1;overflow-y:auto;padding:14px}
+.list-legend{display:flex;gap:14px;margin-bottom:12px;font-size:13px;color:var(--text-soft);align-items:center;flex-wrap:wrap}
+.list-legend span{display:flex;align-items:center;gap:5px}
+.ldot{width:10px;height:10px;border-radius:50%}
+.ldot-R{background:var(--raccord)}.ldot-C{background:var(--concert)}.ldot-off{background:#ddd}
+
+.list-card{background:#fff;border-radius:14px;overflow:hidden;margin-bottom:12px;border:1.5px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.list-card-header{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--grey)}
+.lch-badge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.lch-badge.S{background:var(--S)}.lch-badge.A{background:var(--A)}.lch-badge.T{background:var(--T)}.lch-badge.B{background:var(--B)}
+.lch-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);flex:1}
+.lch-stats{font-size:12px;color:var(--text-soft)}
+
+.list-row{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border);gap:10px;background:#fff}
+.list-row:last-child{border-bottom:none}
+.list-row.row-ok{background:var(--concert-bg)}
+.list-name{flex:1;font-size:15px;font-weight:500;color:var(--ink)}
+.status-dots{display:flex;gap:6px;align-items:center}
+.sdot-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.sdot{width:11px;height:11px;border-radius:50%}
+.sdot.R-on{background:var(--raccord)}.sdot.R-off{background:#e0e0e0}
+.sdot.C-on{background:var(--concert)}.sdot.C-off{background:#e0e0e0}
+.sdot-label{font-size:10px;color:#bbb}
+.stag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;margin-left:4px;white-space:nowrap}
+.stag-ok{background:var(--concert);color:#fff}
+.stag-r{background:var(--raccord);color:#fff}
+.stag-abs{background:#eee;color:#999}
+</style>
+</head>
+<body>
+
+<div id="splash"><div class="ni">🎵</div><p>Connexion…</p></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-top">
+    <div>
+      <div class="htitle">📱 Régisseur</div>
+      <div class="hsub">Pointage · Lecture seule</div>
+    </div>
+    <div class="live-pill R" id="live-pill">
+      <span class="live-dot dot-R" id="live-dot"></span>
+      <span id="live-text">—/—</span>
+    </div>
+  </div>
+
+  <div class="mode-strip" id="mode-strip">
+    <button class="mode-btn active-R" id="btn-R" onclick="setMode('R')">🔶 Raccord</button>
+    <button class="mode-btn" id="btn-C" onclick="setMode('C')">🎭 Concert</button>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('scanner',this)"><span class="ti">📷</span>Scanner</button>
+    <button class="nav-tab" onclick="showView('list',this)"><span class="ti">📋</span>Liste</button>
+  </div>
+</div>
+
+<!-- SCANNER VIEW -->
+<div class="rview active" id="vscanner">
+  <div id="result-box"></div>
+  <div class="scanner-wrap">
+    <div class="scanner-card"><div id="reader"></div></div>
+  </div>
+  <!-- Bouton pour activer/désactiver la caméra -->
+  <button id="toggle-camera" class="toggle-camera-btn" onclick="toggleCamera()">
+    <span id="camera-icon">📷</span> Arrêter le scan
+  </button>
+  <div class="scan-hint">Pointez vers le QR code du choriste</div>
+  <div id="counter-container" class="mode-R">
+    <div class="counter-strip" id="counter-strip"></div>
+  </div>
+  <div style="flex:1"></div>
+</div>
+
+<!-- LIST VIEW -->
+<div class="rview" id="vlist">
+  <div class="list-scroll">
+    <div class="list-legend">
+      <span><span class="ldot ldot-R"></span>Raccord</span>
+      <span><span class="ldot ldot-C"></span>Concert</span>
+      <span><span class="ldot ldot-off"></span>Absent</span>
+    </div>
+    <div id="list-content"></div>
+  </div>
+</div>
+
+<script>
+const PUPITRES=['S','A','T','B'];
+const PUPITRE_LABEL={S:'Sopranos',A:'Altos',T:'Ténors',B:'Basses'};
+
+let choristes={};
+let scanMode='R';
+let scanner=null;
+let scannerRunning=false;
+let resultTimer=null;
+let currentView='scanner';
+let cameraEnabled = true; // État initial de la caméra
+
+// ── FIREBASE ──
+window.addEventListener('firebase-ready',()=>{
+  const {db,ref,onValue}=window.DB;
+  onValue(ref(db,'choristes'),snap=>{
+    choristes=snap.val()||{};
+    updateCounter();
+    if(currentView==='list') renderList();
+  });
+  document.getElementById('splash').style.opacity='0';
+ setTimeout(() => {
+  document.getElementById('splash').style.display = 'none';
+  // Ne démarre pas la caméra automatiquement
+  cameraEnabled = false;
+  document.getElementById('toggle-camera').classList.add('camera-off');
+  document.getElementById('camera-icon').textContent = '🚫';
+  document.getElementById('toggle-camera').textContent = 'Activer le scan';
+}, 400);
+});
+
+// ── VIEWS ──
+function showView(name,btn) {
+  currentView=name;
+  document.querySelectorAll('.rview').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('v'+name).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('mode-strip').style.display=name==='scanner'?'flex':'none';
+  if(name==='scanner') {
+    if (cameraEnabled) {
+      startScanner();
+    }
+  } else {
+    stopScanner();
+    renderList();
+  }
+}
+
+// ── MODE ──
+function setMode(m) {
+  scanMode=m;
+  document.getElementById('btn-R').className='mode-btn'+(m==='R'?' active-R':'');
+  document.getElementById('btn-C').className='mode-btn'+(m==='C'?' active-C':'');
+  const pill=document.getElementById('live-pill');
+  const dot=document.getElementById('live-dot');
+  pill.className='live-pill '+(m==='R'?'R':'C');
+  dot.className='live-dot '+(m==='R'?'dot-R':'dot-C');
+
+  // Met à jour la classe de la counter-container
+  const counterContainer = document.getElementById('counter-container');
+  counterContainer.classList.remove('mode-R', 'mode-C');
+  counterContainer.classList.add(`mode-${m}`);
+
+  updateCounter();
+}
+
+// ── TOGGLE CAMERA ──
+function toggleCamera() {
+  const cameraBtn = document.getElementById('toggle-camera');
+  const cameraIcon = document.getElementById('camera-icon');
+
+  if (cameraEnabled) {
+    stopScanner();
+    cameraBtn.classList.add('camera-off');
+    cameraIcon.textContent = '🚫';
+    cameraBtn.textContent = 'Activer le scan';
+    cameraEnabled = false;
+  } else {
+    startScanner();
+    cameraBtn.classList.remove('camera-off');
+    cameraIcon.textContent = '📷';
+    cameraBtn.textContent = 'Arrêter le scan';
+    cameraEnabled = true;
+  }
+}
+
+// ── COUNTER ──
+function updateCounter() {
+  const all=Object.values(choristes);
+  const champ=scanMode==='R'?'raccord':'concert';
+  const present=all.filter(c=>c[champ]).length;
+  document.getElementById('live-text').textContent=`${present}/${all.length}`;
+  document.getElementById('counter-strip').innerHTML=PUPITRES.map(p=>{
+    const pm=all.filter(c=>c.pupitre===p);
+    const pr=pm.filter(c=>c.raccord).length;
+    const pc=pm.filter(c=>c.concert).length;
+    return `<div class="cs ${p}">
+      <div class="cs-letter">${p}</div>
+      <div class="cs-r">R ${pr}/${pm.length}</div>
+      <div class="cs-c">C ${pc}/${pm.length}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── LIST ──
+function renderList() {
+  const content=document.getElementById('list-content'); content.innerHTML='';
+  PUPITRES.forEach(p=>{
+    const members=Object.entries(choristes).filter(([,c])=>c.pupitre===p);
+    if(!members.length) return;
+    members.sort(([,a],[,b])=>((a.raccord?1:0)+(a.concert?1:0))-((b.raccord?1:0)+(b.concert?1:0)));
+    const pr=members.filter(([,c])=>c.raccord).length;
+    const pc=members.filter(([,c])=>c.concert).length;
+    const div=document.createElement('div'); div.className='list-card';
+    div.innerHTML=`<div class="list-card-header">
+        <span class="lch-badge ${p}">${p}</span>
+        <span class="lch-title">${PUPITRE_LABEL[p]}</span>
+        <span class="lch-stats">R:${pr} C:${pc}/${members.length}</span>
+      </div>
+      ${members.map(([,c])=>{
+        const tag=c.raccord&&c.concert
+          ?`<span class="stag stag-ok">R+C ✓</span>`
+          :c.raccord
+          ?`<span class="stag stag-r">Raccord</span>`
+          :`<span class="stag stag-abs">Absent</span>`;
+        return `<div class="list-row${c.raccord&&c.concert?' row-ok':''}">
+          <span class="list-name">${c.nom}</span>
+          <div class="status-dots">
+            <div class="sdot-wrap"><span class="sdot ${c.raccord?'R-on':'R-off'}"></span><span class="sdot-label">R</span></div>
+            <div class="sdot-wrap"><span class="sdot ${c.concert?'C-on':'C-off'}"></span><span class="sdot-label">C</span></div>
+            ${tag}
+          </div>
+        </div>`;
+      }).join('')}`;
+    content.appendChild(div);
+  });
+  if(!Object.keys(choristes).length)
+    content.innerHTML=`<div style="text-align:center;padding:32px;color:#bbb"><div style="font-size:32px;margin-bottom:8px">🎶</div><p style="font-size:13px">Aucun choriste</p></div>`;
+}
+
+// ── SCANNER ──
+function startScanner() {
+  if(scannerRunning) return;
+  scanner=new Html5Qrcode("reader");
+  scanner.start(
+    {facingMode:"environment"},
+    {fps:12, qrbox:{width:180,height:180}},
+    onScan,()=>{}
+  ).then(()=>{
+    scannerRunning=true;
+    cameraEnabled = true;
+    document.getElementById('toggle-camera').classList.remove('camera-off');
+    document.getElementById('camera-icon').textContent = '📷';
+    document.getElementById('toggle-camera').textContent = 'Arrêter le scan';
+  }).catch(err=>console.warn('Scanner:',err));
+}
+
+function stopScanner(){
+  if(scanner&&scannerRunning) {
+    scanner.stop().then(()=>{
+      scannerRunning=false;
+      cameraEnabled = false;
+      document.getElementById('toggle-camera').classList.add('camera-off');
+      document.getElementById('camera-icon').textContent = '🚫';
+      document.getElementById('toggle-camera').textContent = 'Activer le scan';
+    }).catch(()=>{});
+  }
+}
+
+function pauseScanner(){ if(scanner&&scannerRunning) scanner.pause(true); }
+function resumeScanner(){ if(scanner&&scannerRunning) scanner.resume(); }
+
+function onScan(id) {
+  if(resultTimer) clearTimeout(resultTimer);
+  pauseScanner();
+  const c=choristes[id];
+  const box=document.getElementById('result-box');
+
+  if(!c){
+    box.innerHTML=`<div class="result result-err">
+      <div class="result-icon">❌</div>
+      <div class="result-body">
+        <div class="result-name">QR code inconnu</div>
+        <div class="result-detail">Ce billet n'est pas dans la liste</div>
+        <span class="result-tag">Non reconnu</span>
+      </div>
+    </div>`;
+    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000); return;
+  }
+
+  const champ=scanMode==='R'?'raccord':'concert';
+  const label=scanMode==='R'?'Raccord':'Concert';
+
+  if(c[champ]){
+    box.innerHTML=`<div class="result result-dup">
+      <div class="result-icon">⚠️</div>
+      <div class="result-body">
+        <div class="result-name">${c.nom}</div>
+        <div class="result-detail">${PUPITRE_LABEL[c.pupitre]}</div>
+        <span class="result-tag">Déjà pointé — ${label}</span>
+      </div>
+    </div>`;
+    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000); return;
+  }
+
+  const {db,ref,update}=window.DB;
+  update(ref(db,'choristes/'+id),{[champ]:true});
+
+  box.innerHTML=`<div class="result result-ok">
+    <div class="result-icon">✅</div>
+    <div class="result-body">
+      <div class="result-name">${c.nom}</div>
+      <div class="result-detail">${PUPITRE_LABEL[c.pupitre]}</div>
+      <span class="result-tag">${label} ✓</span>
+    </div>
+  </div>`;
+  resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000);
+}
+</script>
+</body>
+</html>
