@@ -194,7 +194,7 @@ select{flex:0 0 76px}
   </div>
   <div class="pin-error" id="pin-error"></div>
   <div style="margin-top:24px;color:rgba(255,255,255,.2);font-size:11px;text-align:center">
-    PIN par défaut : <strong style="color:rgba(255,255,255,.35)">1234</strong>
+    PIN par défaut : <strong style="color:rgba(255,255,255,.35)">0692</strong>
   </div>
 </div>
 
@@ -310,7 +310,7 @@ select{flex:0 0 76px}
 </div>
 
 <script>
-const PIN = '0692'; // ← Modifiez ici pour changer le code PIN
+const PIN = '0692'; // Code PIN modifié
 const PUPITRES = ['S','A','T','B'];
 const PUPITRE_LABEL = {S:'Sopranos',A:'Altos',T:'Ténors',B:'Basses'};
 const PUPITRE_BG = {S:'#fdf0f3',A:'#f8f0fd',T:'#f0fdf6',B:'#f0f5fd'};
@@ -351,7 +351,13 @@ function lockAdmin() {
 
 // ── FIREBASE ──
 function initFirebase() {
-  const go = () => { const {db,ref,onValue}=window.DB; onValue(ref(db,'choristes'),snap=>{ choristes=snap.val()||{}; renderAll(); }); };
+  const go = () => {
+    const {db,ref,onValue}=window.DB;
+    onValue(ref(db,'choristes'),snap=>{
+      choristes=snap.val()||{};
+      renderAll();
+    });
+  };
   window.DB ? go() : window.addEventListener('firebase-ready',go);
 }
 
@@ -553,7 +559,12 @@ function renderDashboard() {
   }
 }
 
-function renderAll(){renderAdmin();}
+// ── RENDER ALL ──
+function renderAll() {
+  renderAdmin();
+  renderDashboard(); // On render aussi le dashboard pour qu'il soit prêt
+}
+
 document.getElementById('add-nom').addEventListener('keydown',e=>{if(e.key==='Enter') addChoriste();});
 </script>
 </body>
