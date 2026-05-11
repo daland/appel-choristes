@@ -6,7 +6,7 @@
   <title>Admin — Appel Choristes</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" ></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" async></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -291,7 +291,7 @@
     </p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="printAllQR()">🖨 Imprimer tous</button>
-      <button class="btn btn-blue" id="send-all-btn" onclick="openEmailModal()">📧 Envoyer tous par email</button>
+      <button class="btn btn-blue" onclick="openEmailModal()">📧 Envoyer tous par email</button>
     </div>
   </div>
   <p class="section-title">Aperçu par pupitre</p>
@@ -438,7 +438,6 @@
   let importData = [];
   let currentQRid = null;
   let currentEditId = null; // Pour stocker l'ID du choriste en cours de modification
-  let sendingEmails = false;
 
   // ── PIN ──
   function pinKey(k) {
@@ -659,61 +658,27 @@
   }
 
   // ── EMAIL INDIVIDUEL ──
-// ── EMAIL INDIVIDUEL ──
-async function sendOneEmail(){
-
-  const c = choristes[currentQRid];
-
-  if (!c || !c.email) return;
-
-  const canvas = document.querySelector('#qr-display canvas');
-
-  if (!canvas) return;
-
-  const btn = document.getElementById('qr-send-btn');
-  const status = document.getElementById('qr-send-status');
-
-  if (btn.dataset.sending === '1') return;
-
-  btn.dataset.sending = '1';
-
-  btn.disabled = true;
-  btn.textContent = 'Envoi…';
-
-  status.style.color = '#888';
-  status.textContent = 'Envoi en cours…';
-
-  try {
-
-    await emailjs.send(
-      EMAILJS_SERVICE,
-      EMAILJS_TEMPLATE,
-      {
+  async function sendOneEmail(){
+    const c=choristes[currentQRid]; if(!c||!c.email)return;
+    const canvas=document.querySelector('#qr-display canvas'); if(!canvas)return;
+    const btn=document.getElementById('qr-send-btn');
+    const status=document.getElementById('qr-send-status');
+    btn.disabled=true; btn.textContent='Envoi…';
+    status.style.color='#888'; status.textContent='Envoi en cours…';
+    try {
+      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
         to_email: c.email,
         nom: c.nom,
         pupitre: PUPITRE_LABEL[c.pupitre],
         qr_url: canvas.toDataURL('image/png'),
-      }
-    );
-
-    status.style.color = '#2e7d32';
-    status.textContent = '✅ Email envoyé !';
-
-    btn.textContent = '✅ Envoyé';
-
-  } catch(e) {
-
-    status.style.color = '#c62828';
-
-    status.textContent =
-      '❌ Erreur : ' + (e.text || e.message || 'Inconnue');
-
-    btn.disabled = false;
-    btn.textContent = '📧 Réessayer';
-
-    btn.dataset.sending = '0';
+      });
+      status.style.color='#2e7d32'; status.textContent='✅ Email envoyé !';
+      btn.textContent='✅ Envoyé';
+    } catch(e){
+      status.style.color='#c62828'; status.textContent='❌ Erreur : '+(e.text||e.message||'Inconnue');
+      btn.disabled=false; btn.textContent='📧 Réessayer';
+    }
   }
-}
 
   // ── IMPRESSION GROUPÉE ──
   function printAllQR(){
