@@ -480,7 +480,7 @@ function onScan(id) {
         <span class="result-tag">Non reconnu</span>
       </div>
     </div>`;
-    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000); return;
+    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },2000); return;
   }
 
   const champ=scanMode==='R'?'raccord':'concert';
@@ -495,7 +495,7 @@ function onScan(id) {
         <span class="result-tag">Déjà pointé — ${label}</span>
       </div>
     </div>`;
-    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000); return;
+    resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },2000); return;
   }
 
   const {db,ref,update}=window.DB;
@@ -513,7 +513,7 @@ function onScan(id) {
       <span class="result-tag">${label} ✓</span>
     </div>
   </div>`;
-  resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },3000);
+  resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },2000);
 }
 </script>
 </body>
