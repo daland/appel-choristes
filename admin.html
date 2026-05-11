@@ -6,11 +6,18 @@
   <title>Admin — Appel Choristes</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" async></script>
+  <!-- Chargement synchrone d'EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    // Initialisation d'EmailJS (une seule fois)
+    emailjs.defaults({
+      publicKey: 'YkvQcXLdKkT33yOVo',
+    });
+  </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-	import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     const firebaseConfig = {
       apiKey: "AIzaSyBqHVMzmdy-rGuUGFmciqjqF-SuwoVt_RM",
       authDomain: "appel-choristes.firebaseapp.com",
@@ -23,12 +30,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     window.DB = { ref, set, onValue, update, remove, db };
-	
-	const auth = getAuth(app);
-	signInAnonymously(auth)
-	.then(() => { window.dispatchEvent(new Event('firebase-ready')); })
-	.catch(err => { console.error('Auth error:', err); window.dispatchEvent(new Event('firebase-ready')); });
-	</script>
+
+    const auth = getAuth(app);
+    signInAnonymously(auth)
+      .then(() => { window.dispatchEvent(new Event('firebase-ready')); })
+      .catch(err => { console.error('Auth error:', err); window.dispatchEvent(new Event('firebase-ready')); });
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
     :root{
@@ -413,20 +420,9 @@
 </div>
 
 <script>
-  // Configuration EmailJS (à remplacer par tes propres clés)
-  const EMAILJS_PUBLIC  = 'YkvQcXLdKkT33yOVo';
+  // Configuration EmailJS
   const EMAILJS_SERVICE = 'service_h9t254k';
-  const EMAILJS_TEMPLATE= 'template_9n2tqpt';
-
-  // Initialisation dynamique d'EmailJS
-  function initEmailJS() {
-    if (typeof emailjs !== 'undefined') {
-      emailjs.init(EMAILJS_PUBLIC);
-    } else {
-      setTimeout(initEmailJS, 100);
-    }
-  }
-  initEmailJS();
+  const EMAILJS_TEMPLATE = 'template_9n2tqpt';
 
   const PIN = '0692';
   const PUPITRES = ['S','A','T','B'];
@@ -437,7 +433,8 @@
   let pinEntry = '';
   let importData = [];
   let currentQRid = null;
-  let currentEditId = null; // Pour stocker l'ID du choriste en cours de modification
+  let currentEditId = null;
+  let isSendingOne = false; // Verrou pour éviter les doubles clics sur l'envoi individuel
 
   // ── PIN ──
   function pinKey(k) {
@@ -598,6 +595,66 @@
     w.document.close(); setTimeout(()=>{ w.print(); w.close(); },300);
   }
 
+  // ── EMAIL INDIVIDUEL (corrigé pour éviter les doubles envois) ──
+  async function sendOneEmail() {
+    if (isSendingOne) {
+      console.log("Envoi déjà en cours, ignore...");
+      return;
+    }
+    isSendingOne = true;
+
+    const c = choristes[currentQRid];
+    if (!c || !c.email) {
+      isSendingOne = false;
+      return;
+    }
+
+    const canvas = document.querySelector('#qr-display canvas');
+    if (!canvas) {
+      isSendingOne = false;
+      return;
+    }
+
+    const btn = document.getElementById('qr-send-btn');
+    const status = document.getElementById('qr-send-status');
+
+    btn.disabled = true;
+    btn.textContent = 'Envoi…';
+    status.style.color = '#888';
+    status.textContent = 'Envoi en cours…';
+
+    try {
+      const response = await emailjs.send(
+        EMAILJS_SERVICE,
+        EMAILJS_TEMPLATE,
+        {
+          to_email: c.email,
+          nom: c.nom,
+          pupitre: PUPITRE_LABEL[c.pupitre],
+          qr_url: canvas.toDataURL('image/png'),
+        }
+      );
+
+      status.style.color = '#2e7d32';
+      status.textContent = '✅ Email envoyé !';
+      btn.textContent = '✅ Envoyé';
+
+      // Réactive le bouton après 2 secondes
+      setTimeout(() => {
+        btn.textContent = '📧 Envoyer';
+        btn.disabled = false;
+        isSendingOne = false;
+      }, 2000);
+
+    } catch (error) {
+      status.style.color = '#c62828';
+      status.textContent = '❌ Erreur : ' + (error.text || error.message || 'Inconnue');
+      btn.disabled = false;
+      btn.textContent = '📧 Réessayer';
+      isSendingOne = false;
+    }
+  }
+
   // ── RESET ──
   function openResetModal(){document.getElementById('reset-modal').classList.add('open');}
   function closeResetModal(){document.getElementById('reset-modal').classList.remove('open');}
@@ -655,29 +712,6 @@
       set(ref(db,'choristes/'+id),{nom,pupitre,email:email||'',raccord:false,concert:false});
     });
     closeImportModal();
-  }
-
-  // ── EMAIL INDIVIDUEL ──
-  async function sendOneEmail(){
-    const c=choristes[currentQRid]; if(!c||!c.email)return;
-    const canvas=document.querySelector('#qr-display canvas'); if(!canvas)return;
-    const btn=document.getElementById('qr-send-btn');
-    const status=document.getElementById('qr-send-status');
-    btn.disabled=true; btn.textContent='Envoi…';
-    status.style.color='#888'; status.textContent='Envoi en cours…';
-    try {
-      await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-        to_email: c.email,
-        nom: c.nom,
-        pupitre: PUPITRE_LABEL[c.pupitre],
-        qr_url: canvas.toDataURL('image/png'),
-      });
-      status.style.color='#2e7d32'; status.textContent='✅ Email envoyé !';
-      btn.textContent='✅ Envoyé';
-    } catch(e){
-      status.style.color='#c62828'; status.textContent='❌ Erreur : '+(e.text||e.message||'Inconnue');
-      btn.disabled=false; btn.textContent='📧 Réessayer';
-    }
   }
 
   // ── IMPRESSION GROUPÉE ──
