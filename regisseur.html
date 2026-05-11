@@ -501,6 +501,10 @@ function onScan(id) {
   const {db,ref,update}=window.DB;
   update(ref(db,'choristes/'+id),{[champ]:true});
 
+  // Mise à jour locale immédiate pour que le compteur soit correct sans attendre Firebase
+  choristes[id][champ]=true;
+  updateCounter();
+
   box.innerHTML=`<div class="result result-ok">
     <div class="result-icon">✅</div>
     <div class="result-body">
