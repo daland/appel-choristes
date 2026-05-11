@@ -659,129 +659,59 @@
   }
 
   // ── EMAIL INDIVIDUEL ──
-async function openEmailModal(){
+// ── EMAIL INDIVIDUEL ──
+async function sendOneEmail(){
 
-  if (sendingEmails) return;
-  sendingEmails = true;
+  const c = choristes[currentQRid];
 
-  const triggerBtn = document.getElementById('send-all-btn');
+  if (!c || !c.email) return;
 
-  if (triggerBtn) {
-    triggerBtn.disabled = true;
-  }
+  const canvas = document.querySelector('#qr-display canvas');
+
+  if (!canvas) return;
+
+  const btn = document.getElementById('qr-send-btn');
+  const status = document.getElementById('qr-send-status');
+
+  if (btn.dataset.sending === '1') return;
+
+  btn.dataset.sending = '1';
+
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+
+  status.style.color = '#888';
+  status.textContent = 'Envoi en cours…';
 
   try {
 
-    const withEmail = Object.entries(choristes).filter(([,c]) => c.email);
-    const without = Object.entries(choristes).filter(([,c]) => !c.email);
-
-    if (!withEmail.length) {
-      alert('Aucun choriste n\'a d\'email renseigné.');
-      return;
-    }
-
-    document.getElementById('email-modal-title').textContent = '📧 Envoi des billets';
-
-    document.getElementById('email-modal-sub').textContent =
-      `${withEmail.length} email(s) à envoyer${without.length ? ' · ' + without.length + ' sans email (ignorés)' : ''}`;
-
-    document.getElementById('email-bar').style.width = '0%';
-
-    document.getElementById('email-log').innerHTML =
-      '<span class="email-log-info">Démarrage…</span><br>';
-
-    document.getElementById('email-close-btn').disabled = true;
-
-    document.getElementById('email-modal').classList.add('open');
-
-    const tmp = document.createElement('div');
-
-    tmp.style.cssText =
-      'position:fixed;top:-9999px;left:-9999px';
-
-    document.body.appendChild(tmp);
-
-    let sent = 0;
-    let errors = 0;
-
-    const log = document.getElementById('email-log');
-    const bar = document.getElementById('email-bar');
-
-    for (let i = 0; i < withEmail.length; i++) {
-
-      const [id, c] = withEmail[i];
-
-      const div = document.createElement('div');
-      tmp.appendChild(div);
-
-      new QRCode(div, {
-        text: id,
-        width: 200,
-        height: 200,
-        correctLevel: QRCode.CorrectLevel.H
-      });
-
-      await new Promise(requestAnimationFrame);
-
-      const canvas = div.querySelector('canvas');
-
-      if (!canvas) {
-        errors++;
-
-        log.innerHTML +=
-          `<span class="email-log-err">❌ ${c.nom} — QR non généré</span><br>`;
-
-        continue;
+    await emailjs.send(
+      EMAILJS_SERVICE,
+      EMAILJS_TEMPLATE,
+      {
+        to_email: c.email,
+        nom: c.nom,
+        pupitre: PUPITRE_LABEL[c.pupitre],
+        qr_url: canvas.toDataURL('image/png'),
       }
+    );
 
-      try {
+    status.style.color = '#2e7d32';
+    status.textContent = '✅ Email envoyé !';
 
-        await emailjs.send(
-          EMAILJS_SERVICE,
-          EMAILJS_TEMPLATE,
-          {
-            to_email: c.email,
-            nom: c.nom,
-            pupitre: PUPITRE_LABEL[c.pupitre],
-            qr_url: canvas.toDataURL('image/png'),
-          }
-        );
+    btn.textContent = '✅ Envoyé';
 
-        sent++;
+  } catch(e) {
 
-        log.innerHTML +=
-          `<span class="email-log-ok">✅ ${c.nom} → ${c.email}</span><br>`;
+    status.style.color = '#c62828';
 
-      } catch(e) {
+    status.textContent =
+      '❌ Erreur : ' + (e.text || e.message || 'Inconnue');
 
-        errors++;
+    btn.disabled = false;
+    btn.textContent = '📧 Réessayer';
 
-        log.innerHTML +=
-          `<span class="email-log-err">❌ ${c.nom} — ${e.text || 'Erreur'}</span><br>`;
-      }
-
-      log.scrollTop = log.scrollHeight;
-
-      bar.style.width =
-        Math.round(((i + 1) / withEmail.length) * 100) + '%';
-
-      await new Promise(r => setTimeout(r, 200));
-    }
-
-    document.body.removeChild(tmp);
-
-    document.getElementById('email-modal-sub').textContent =
-      `Terminé : ${sent} envoyé(s)${errors ? ' · ' + errors + ' erreur(s)' : ''}`;
-
-    document.getElementById('email-close-btn').disabled = false;
-
-  } finally {
-
-    sendingEmails = false;
-
-    if (triggerBtn) {
-      triggerBtn.disabled = false;
-    }
+    btn.dataset.sending = '0';
   }
 }
 
