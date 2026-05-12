@@ -233,6 +233,21 @@ body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);displa
 .stag-ok{background:var(--concert);color:#fff}
 .stag-r{background:var(--raccord);color:#fff}
 .stag-abs{background:#eee;color:#999}
+
+/* CHECK BUTTONS (liste pointage) */
+.chk-btn{width:36px;height:36px;border-radius:9px;border:2px solid #e0e0e0;background:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;font-family:'DM Sans',sans-serif}
+.chk-btn:active{transform:scale(.92)}
+.chk-btn.on-R{background:var(--raccord);border-color:var(--raccord);color:#fff}
+.chk-btn.on-C{background:var(--concert);border-color:var(--concert);color:#fff}
+
+/* SEARCH BAR */
+.list-search-wrap{padding:10px 14px 0;flex-shrink:0}
+.list-search{width:100%;padding:10px 14px 10px 38px;border-radius:12px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23aaa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cline x1='11' y1='11' x2='15' y2='15'/%3E%3C/svg%3E") no-repeat 12px center;transition:border-color .2s}
+.list-search:focus{border-color:var(--gold)}
+.list-search-clear{position:absolute;right:24px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;color:#bbb;cursor:pointer;padding:4px;line-height:1}
+.list-search-container{position:relative}
+.list-no-results{text-align:center;padding:32px;color:#bbb}
+.list-no-results .ei{font-size:28px;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -259,7 +274,8 @@ body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);displa
 
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showView('scanner',this)"><span class="ti">📷</span>Scanner</button>
-    <button class="nav-tab" onclick="showView('list',this)"><span class="ti">📋</span>Liste</button>
+    <button class="nav-tab" onclick="showView('absents',this)"><span class="ti">🚨</span>Absents</button>
+	 <button class="nav-tab" onclick="showView('list',this)"><span class="ti">📋</span>Liste</button>
   </div>
 </div>
 
@@ -280,8 +296,8 @@ body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);displa
   <div style="flex:1"></div>
 </div>
 
-<!-- LIST VIEW -->
-<div class="rview" id="vlist">
+<!-- absents VIEW -->
+<div class="rview" id="vabsents">
   <div class="list-scroll">
     <div class="list-legend">
       <span><span class="ldot ldot-R"></span>Raccord</span>
@@ -291,6 +307,32 @@ body{font-family:'DM Sans',sans-serif;background:#f4f4f6;color:var(--ink);displa
     <div id="list-content"></div>
   </div>
 </div>
+
+<!-- VUE list -->
+<div class="rview" id="vlist">
+  <div class="list-search-wrap">
+    <div class="list-search-container">
+      <input class="list-search" id="list-search" type="search" placeholder="Rechercher un choriste…" oninput="onListSearch(this.value)" autocomplete="off" autocorrect="off" spellcheck="false"/>
+    </div>
+  </div>
+  <div class="list-scroll" style="padding-top:10px">
+    <div class="list-legend">
+      <span><span class="ldot ldot-R"></span>Raccord</span>
+      <span><span class="ldot ldot-C"></span>Concert</span>
+      <span><span class="ldot ldot-off"></span>Absent</span>
+    </div>
+    <div id="list-content2"></div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
 
 <script>
 const PUPITRES=['S','A','T','B'];
@@ -310,7 +352,8 @@ window.addEventListener('firebase-ready',()=>{
   onValue(ref(db,'choristes'),snap=>{
     choristes=snap.val()||{};
     updateCounter();
-    if(currentView==='list') renderList();
+    if(currentView==='absents') renderList();
+    if(currentView==='list') renderListByPupitre();
   });
   document.getElementById('splash').style.opacity='0';
  setTimeout(() => {
@@ -337,7 +380,8 @@ function showView(name,btn) {
     }
   } else {
     stopScanner();
-    renderList();
+    if(name==='absents') renderList();
+    if(name==='list') renderListByPupitre();
   }
 }
 
@@ -514,6 +558,92 @@ function onScan(id) {
     </div>
   </div>`;
   resultTimer=setTimeout(()=>{ box.innerHTML=''; resumeScanner(); },1500);
+}
+
+// ── TOGGLE PRESENCE (depuis la liste) ──
+function togglePresence(id, champ) {
+  const {db, ref, update} = window.DB;
+  const newVal = !choristes[id][champ];
+  choristes[id][champ] = newVal; // mise à jour locale immédiate
+  update(ref(db, 'choristes/' + id), {[champ]: newVal});
+  updateCounter();
+  // Refresh visuel du bouton uniquement
+  const btn = document.getElementById(`chk-${id}-${champ}`);
+  if (btn) {
+    btn.classList.toggle('on-R', champ === 'raccord' && newVal);
+    btn.classList.toggle('on-C', champ === 'concert' && newVal);
+    btn.classList.toggle('', !newVal);
+    if (!newVal) { btn.className = 'chk-btn'; }
+    // Mise à jour de la row
+    const row = document.getElementById(`row-${id}`);
+    if (row) {
+      row.classList.toggle('row-ok', choristes[id].raccord && choristes[id].concert);
+      // Mise à jour du tag statut
+      const tagEl = row.querySelector('.stag');
+      if (tagEl) {
+        const c = choristes[id];
+        if (c.raccord && c.concert) { tagEl.className='stag stag-ok'; tagEl.textContent='R+C ✓'; }
+        else if (c.raccord)         { tagEl.className='stag stag-r';  tagEl.textContent='Raccord'; }
+        else                        { tagEl.className='stag stag-abs'; tagEl.textContent='Absent'; }
+      }
+    }
+    // Mise à jour du header stats
+    updateCardStats(choristes[id].pupitre);
+  }
+}
+
+function updateCardStats(p) {
+  // Plus de header par pupitre dans la vue liste alphabétique — rien à mettre à jour ici
+}
+
+// ── SEARCH ──
+let listSearchQuery = '';
+function onListSearch(q) {
+  listSearchQuery = q.trim().toLowerCase();
+  renderListByPupitre();
+}
+
+// ── RENDER LIST PAR ORDRE ALPHABÉTIQUE (onglet Liste) ──
+function renderListByPupitre() {
+  const content = document.getElementById('list-content2');
+  content.innerHTML = '';
+  const q = listSearchQuery;
+
+  let members = Object.entries(choristes);
+  if (q) members = members.filter(([, c]) => c.nom.toLowerCase().includes(q));
+
+  if (!Object.keys(choristes).length) {
+    content.innerHTML = `<div class="list-no-results"><div class="ei">🎶</div><p style="font-size:13px">Aucun choriste</p></div>`;
+    return;
+  }
+  if (q && members.length === 0) {
+    content.innerHTML = `<div class="list-no-results"><div class="ei">🔍</div><p style="font-size:13px">Aucun résultat pour « ${q} »</p></div>`;
+    return;
+  }
+
+  // Tri alphabétique par nom
+  members.sort(([, a], [, b]) => a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' }));
+
+  const div = document.createElement('div');
+  div.className = 'list-card';
+  div.innerHTML = members.map(([id, c]) => {
+    const tag = c.raccord && c.concert
+      ? `<span class="stag stag-ok">R+C ✓</span>`
+      : c.raccord
+      ? `<span class="stag stag-r">Raccord</span>`
+      : `<span class="stag stag-abs">Absent</span>`;
+    const pupBadge = `<span class="lch-badge ${c.pupitre}" style="width:24px;height:24px;border-radius:6px;font-size:12px;flex-shrink:0">${c.pupitre}</span>`;
+    return `<div class="list-row${c.raccord && c.concert ? ' row-ok' : ''}" id="row-${id}">
+      ${pupBadge}
+      <span class="list-name">${c.nom}</span>
+      <div class="status-dots">
+        <button id="chk-${id}-raccord" class="chk-btn${c.raccord ? ' on-R' : ''}" onclick="togglePresence('${id}','raccord')">R</button>
+        <button id="chk-${id}-concert" class="chk-btn${c.concert ? ' on-C' : ''}" onclick="togglePresence('${id}','concert')">C</button>
+        ${tag}
+      </div>
+    </div>`;
+  }).join('');
+  content.appendChild(div);
 }
 </script>
 </body>
