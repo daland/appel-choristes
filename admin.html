@@ -125,6 +125,20 @@
     .reset-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:8px}
     .reset-box p{font-size:13px;color:#888;margin-bottom:18px}
 
+    /* CLEAR MODAL */
+    #clear-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;align-items:center;justify-content:center;padding:20px}
+    #clear-modal.open{display:flex}
+    .clear-box{background:#fff;border-radius:20px;padding:26px;max-width:310px;width:100%;text-align:center}
+    .clear-box h3{font-family:'Playfair Display',serif;font-size:19px;margin-bottom:8px;color:#c62828}
+    .clear-box p{font-size:13px;color:#888;margin-bottom:18px;line-height:1.6}
+    .clear-step{transition:all .25s}
+    .clear-confirm-input{width:100%;padding:10px 13px;border-radius:10px;border:2px solid #ef9a9a;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;text-align:center;margin-bottom:14px;letter-spacing:1px}
+    .clear-confirm-input:focus{border-color:#c62828}
+    .clear-confirm-input.valid{border-color:#2e7d32;background:#f1f8e9}
+    .btn-delete-final{background:#c62828;color:#fff;width:100%;padding:12px;border-radius:10px;border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;opacity:.4}
+    .btn-delete-final.ready{opacity:1}
+    .btn-delete-final.ready:hover{background:#b71c1c}
+
     /* IMPORT MODAL */
     #import-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:center;justify-content:center;padding:20px}
     #import-modal.open{display:flex}
@@ -268,6 +282,7 @@
   <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <button class="btn btn-green btn-sm" onclick="openImportModal()">📥 Importer Excel</button>
     <button class="btn btn-outline btn-sm" onclick="openResetModal()">↺ Réinitialiser</button>
+    <button class="btn btn-sm" style="background:#fff0f0;color:#c62828;border:1.5px solid #ef9a9a" onclick="openClearModal()">🗑 Tout effacer</button>
   </div>
 
   <!-- Boutons pour scroller vers chaque pupitre -->
@@ -397,6 +412,31 @@
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeEditModal()">Annuler</button>
       <button class="btn btn-gold" style="flex:1" onclick="saveEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR MODAL -->
+<div id="clear-modal">
+  <div class="clear-box">
+    <!-- Étape 1 -->
+    <div id="clear-step1" class="clear-step">
+      <div style="font-size:44px;margin-bottom:10px">🗑️</div>
+      <h3>Tout effacer ?</h3>
+      <p>Cette action supprimera <strong>tous les choristes</strong> et toutes leurs données (présences, emails).<br>Cette opération est <strong>irréversible</strong>.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline" style="flex:1" onclick="closeClearModal()">Annuler</button>
+        <button class="btn btn-sm" style="flex:1;background:#ffebee;color:#c62828;border:1.5px solid #ef9a9a;padding:10px" onclick="clearStep2()">Continuer ⟶</button>
+      </div>
+    </div>
+    <!-- Étape 2 -->
+    <div id="clear-step2" class="clear-step" style="display:none">
+      <div style="font-size:44px;margin-bottom:10px">⚠️</div>
+      <h3>Confirmation finale</h3>
+      <p>Tapez <strong style="color:#c62828;letter-spacing:1px">EFFACER</strong> ci-dessous pour confirmer la suppression totale.</p>
+      <input type="text" id="clear-confirm-input" class="clear-confirm-input" placeholder="EFFACER" oninput="checkClearInput(this)" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"/>
+      <button class="btn-delete-final" id="clear-final-btn" onclick="doFullClear()" disabled>🗑 Supprimer tout le chœur</button>
+      <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%" onclick="closeClearModal()">Annuler</button>
     </div>
   </div>
 </div>
@@ -596,6 +636,33 @@
       <p style="margin-top:14px;font-size:12px;color:#aaa">Billet d'entrée — Conservez précieusement</p>
     </body></html>`);
     w.document.close(); setTimeout(()=>{ w.print(); w.close(); },300);
+  }
+
+  // ── CLEAR ALL ──
+  function openClearModal() {
+    document.getElementById('clear-step1').style.display='block';
+    document.getElementById('clear-step2').style.display='none';
+    document.getElementById('clear-confirm-input').value='';
+    document.getElementById('clear-final-btn').disabled=true;
+    document.getElementById('clear-final-btn').classList.remove('ready');
+    document.getElementById('clear-modal').classList.add('open');
+  }
+  function closeClearModal() { document.getElementById('clear-modal').classList.remove('open'); }
+  function clearStep2() {
+    document.getElementById('clear-step1').style.display='none';
+    document.getElementById('clear-step2').style.display='block';
+    setTimeout(()=>document.getElementById('clear-confirm-input').focus(),100);
+  }
+  function checkClearInput(input) {
+    const ok = input.value.trim().toUpperCase() === 'EFFACER';
+    input.classList.toggle('valid', ok);
+    document.getElementById('clear-final-btn').disabled = !ok;
+    document.getElementById('clear-final-btn').classList.toggle('ready', ok);
+  }
+  function doFullClear() {
+    const {db,ref,set}=window.DB;
+    set(ref(db,'choristes'), null);
+    closeClearModal();
   }
 
   // ── RESET ──
